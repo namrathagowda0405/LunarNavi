@@ -156,10 +156,15 @@ export function MissionSetup({
     <div className="view-container">
       <header className="view-header">
         <div className="section-tag">MISSION-AWARE DECISION CONFIGURATION</div>
-        <h1 className="view-title">Mission Setup</h1>
+        <div className="title-row">
+          <h1 className="view-title">Mission Setup</h1>
+          <span className="status-chip status-chip--planned" role="status">
+            <span className="status-chip__dot" aria-hidden="true" />
+            <span className="status-chip__text">Planned</span>
+          </span>
+        </div>
         <p className="view-description">
-          Define mission parameters, operational priorities, and engineering constraints for lunar landing site evaluation.
-          All priorities and limits are user-configured; no hidden defaults or automated assumptions are applied.
+          Configure mission type, target region, physical constraints, and evaluation criteria weights for lunar landing site evaluation.
         </p>
       </header>
 

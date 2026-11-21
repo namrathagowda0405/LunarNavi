@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Sidebar, ViewId } from './frontend/Sidebar'
 import { OverviewDashboard } from './frontend/views/OverviewDashboard'
 import { MissionSetup } from './frontend/views/MissionSetup'
@@ -11,17 +11,54 @@ import { AboutLunarNavi } from './frontend/views/MissionOverview'
 import { defaultFormState, MissionFormState } from './frontend/missionForm'
 import { MissionProfile } from './engine/mission'
 
+const VALID_VIEWS: ViewId[] = [
+  'overview',
+  'setup',
+  'map',
+  'sites',
+  'results',
+  'robustness',
+  'data-sources',
+  'about',
+]
+
+function getInitialView(): ViewId {
+  if (typeof window !== 'undefined' && window.location.hash) {
+    const raw = window.location.hash.replace(/^#\/?/, '') as ViewId
+    if (VALID_VIEWS.includes(raw)) return raw
+  }
+  return 'overview'
+}
+
 export function App() {
-  // Default to Overview Dashboard as the landing page
-  const [activeView, setActiveView] = useState<ViewId>('overview')
+  // Default to Overview Dashboard as the landing page, or sync with URL hash
+  const [activeView, setActiveView] = useState<ViewId>(getInitialView)
   // Form state preserved in application state across navigation
   const [formState, setFormState] = useState<MissionFormState>(defaultFormState)
   // Stored validated mission profile
   const [configuredMission, setConfiguredMission] = useState<MissionProfile | null>(null)
 
+  useEffect(() => {
+    const handleHash = () => {
+      const raw = window.location.hash.replace(/^#\/?/, '') as ViewId
+      if (VALID_VIEWS.includes(raw)) {
+        setActiveView(raw)
+      }
+    }
+    window.addEventListener('hashchange', handleHash)
+    return () => window.removeEventListener('hashchange', handleHash)
+  }, [])
+
+  const handleViewChange = (view: ViewId) => {
+    if (typeof window !== 'undefined') {
+      window.location.hash = view
+    }
+    setActiveView(view)
+  }
+
   const handleAnalyzeSuccess = (profile: MissionProfile) => {
     setConfiguredMission(profile)
-    setActiveView('results')
+    handleViewChange('results')
   }
 
   return (
@@ -57,10 +94,10 @@ export function App() {
 
       {/* Main Two-Column Layout */}
       <div className="app-body">
-        <Sidebar activeView={activeView} onViewChange={setActiveView} />
+        <Sidebar activeView={activeView} onViewChange={handleViewChange} />
 
         <main id="main-content" className="app-content" tabIndex={-1}>
-          {activeView === 'overview' && <OverviewDashboard onNavigate={setActiveView} />}
+          {activeView === 'overview' && <OverviewDashboard onNavigate={handleViewChange} />}
           {activeView === 'setup' && (
             <MissionSetup
               formState={formState}
@@ -68,16 +105,16 @@ export function App() {
               onAnalyzeSuccess={handleAnalyzeSuccess}
             />
           )}
-          {activeView === 'map' && <LunarMap onNavigate={setActiveView} />}
+          {activeView === 'map' && <LunarMap onNavigate={handleViewChange} />}
           {activeView === 'sites' && <CandidateSites />}
           {activeView === 'results' && (
             <Results
               formState={formState}
               configuredMission={configuredMission}
-              onEditMission={() => setActiveView('setup')}
+              onEditMission={() => handleViewChange('setup')}
             />
           )}
-          {activeView === 'robustness' && <RobustnessAnalysis onNavigate={setActiveView} />}
+          {activeView === 'robustness' && <RobustnessAnalysis onNavigate={handleViewChange} />}
           {activeView === 'data-sources' && <DataAndSources />}
           {activeView === 'about' && <AboutLunarNavi />}
         </main>

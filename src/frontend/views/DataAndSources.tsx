@@ -31,7 +31,13 @@ export function DataAndSources() {
     <div className="view-container">
       <header className="view-header">
         <div className="section-tag">METHODOLOGICAL RIGOR</div>
-        <h1 className="view-title">Data and Sources</h1>
+        <div className="title-row">
+          <h1 className="view-title">Data & Sources</h1>
+          <span className="status-chip status-chip--pending" role="status">
+            <span className="status-chip__dot" aria-hidden="true" />
+            <span className="status-chip__text">Pending</span>
+          </span>
+        </div>
         <p className="view-description">
           Scientific integrity is the primary design requirement of LunarNavi. Space mission planning
           demands absolute honesty about what is known, what is modeled, and what remains unmeasured.
@@ -79,16 +85,52 @@ export function DataAndSources() {
         </ol>
       </section>
 
-      {/* Dataset Sources State */}
+      {/* Authoritative Lunar Data Sources & Integration Status */}
       <section className="panel" aria-labelledby="sources-heading">
         <div className="panel-header">
-          <span className="panel-tag">PROVENANCE REPOSITORY</span>
-          <h2 id="sources-heading" className="panel-title">Mission Instrument Sources</h2>
-        </div>
-        <div className="sources-notice">
-          <p className="sources-notice__text">
-            Sources will be listed here once the dataset is loaded.
+          <span className="panel-tag">AUTHORITATIVE SOURCES</span>
+          <h2 id="sources-heading" className="panel-title">NASA & Planetary Data System Sources</h2>
+          <p className="panel-subtitle">
+            Authoritative lunar datasets targeted for integration in future milestones. No unverified or synthetic datasets are loaded.
           </p>
+        </div>
+
+        <div className="grid-cards">
+          <article className="info-card">
+            <div className="card-badge">NASA LRO / LOLA</div>
+            <h3 className="card-title">Lunar Orbiter Laser Altimeter</h3>
+            <p className="card-text">
+              Digital elevation models (DEM), topography, slope maps, and surface roughness metrics (20m–60m/px).
+            </p>
+            <div className="source-status font-mono">STATUS: PENDING INTEGRATION</div>
+          </article>
+
+          <article className="info-card">
+            <div className="card-badge">NASA LRO / LROC NAC</div>
+            <h3 className="card-title">Narrow Angle Camera</h3>
+            <p className="card-text">
+              Sub-meter optical imagery for visual terrain identification and multi-year solar illumination persistence studies.
+            </p>
+            <div className="source-status font-mono">STATUS: PENDING INTEGRATION</div>
+          </article>
+
+          <article className="info-card">
+            <div className="card-badge">NASA LRO / DIVINER</div>
+            <h3 className="card-title">Lunar Radiometer Experiment</h3>
+            <p className="card-text">
+              Surface and subsurface thermal measurements to assess cold traps and permanently shadowed regions (PSRs).
+            </p>
+            <div className="source-status font-mono">STATUS: PENDING INTEGRATION</div>
+          </article>
+
+          <article className="info-card">
+            <div className="card-badge">NASA PDS / LP-NS</div>
+            <h3 className="card-title">Lunar Prospector Neutron Spectrometer</h3>
+            <p className="card-text">
+              Epithermal neutron suppression maps indicative of volatile and hydrogen enrichment in polar craters.
+            </p>
+            <div className="source-status font-mono">STATUS: PENDING INTEGRATION</div>
+          </article>
         </div>
       </section>
     </div>

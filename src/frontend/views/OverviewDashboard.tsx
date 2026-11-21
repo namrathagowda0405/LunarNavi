@@ -9,7 +9,7 @@ interface ModuleStatusItem {
   id: string
   name: string
   status: string
-  statusType: 'in-development' | 'planned' | 'engine' | 'pending'
+  statusType: 'available' | 'in-development' | 'planned' | 'engine' | 'pending'
   detail: string
   actionView?: ViewId
 }
@@ -18,18 +18,18 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
   // Exact module status entries specified in Milestone UI-1 requirements
   const moduleStatuses: ModuleStatusItem[] = [
     {
-      id: 'app-shell',
-      name: 'Application Shell',
-      status: 'In Development',
-      statusType: 'in-development',
-      detail: 'Dark lunar mission-control interface, responsive layout, and sidebar navigation.',
+      id: 'app-dashboard',
+      name: 'Application Dashboard',
+      status: 'Available',
+      statusType: 'available',
+      detail: 'Dark lunar mission-control interface, responsive layout, workflow tracking, and navigation.',
     },
     {
       id: 'mission-setup',
       name: 'Mission Setup',
       status: 'Planned',
       statusType: 'planned',
-      detail: 'Interactive multi-criteria weights, operational limits, and physical constraint builder.',
+      detail: 'Configure mission type, target region, physical constraints, and evaluation criteria weights.',
       actionView: 'setup',
     },
     {
@@ -37,7 +37,7 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
       name: 'Interactive Lunar Map',
       status: 'Planned',
       statusType: 'planned',
-      detail: 'Polar stereographic GIS container with coordinate tracking and candidate site overlays (Milestone UI-3).',
+      detail: 'Polar stereographic GIS container with coordinate tracking, terrain layers, and candidate site overlays.',
       actionView: 'map',
     },
     {
@@ -45,7 +45,15 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
       name: 'Candidate Site Data',
       status: 'Pending Verification',
       statusType: 'pending',
-      detail: 'Candidate location data contracts, schemas, and coordinate verification (Milestone D1/D2).',
+      detail: 'Candidate landing-site coordinates and verified topographical, scientific, and communication datasets.',
+      actionView: 'sites',
+    },
+    {
+      id: 'feasibility-engine',
+      name: 'Feasibility Engine',
+      status: 'In Development',
+      statusType: 'in-development',
+      detail: 'Deterministic filtering of candidate sites against non-negotiable mission constraints (pass/marginal/fail).',
       actionView: 'sites',
     },
     {
@@ -53,21 +61,21 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
       name: 'TOPSIS Ranking',
       status: 'Engine Development',
       statusType: 'engine',
-      detail: 'Multi-criteria geometric distance ranking engine using ideal and negative-ideal benchmarks.',
+      detail: 'Multi-criteria geometric distance ranking engine using positive-ideal and negative-ideal benchmarks.',
       actionView: 'results',
     },
     {
       id: 'monte-carlo',
-      name: 'Monte Carlo Robustness',
+      name: 'Monte Carlo Analysis',
       status: 'Planned',
       statusType: 'planned',
-      detail: 'Triangular distribution parameter perturbation testing ranking stability under uncertainty.',
+      detail: 'Probabilistic simulation perturbing measurement noise and stakeholder weights to measure ranking stability.',
       actionView: 'robustness',
     },
     {
-      id: 'lunar-data',
-      name: 'Real Lunar Data',
-      status: 'Pending Integration',
+      id: 'nasa-data',
+      name: 'NASA Data Integration',
+      status: 'Pending',
       statusType: 'pending',
       detail: 'Orbiter instrument datasets from LOLA (elevation/slope), LROC, and Diviner polar observations.',
       actionView: 'data-sources',
@@ -77,8 +85,10 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
   const workflowSteps = [
     {
       step: 1,
-      title: 'Mission Configuration',
+      title: 'Mission Setup',
       tag: 'STEP 1',
+      status: 'Planned',
+      statusClass: 'status-badge-planned',
       desc: 'Define spacecraft constraints, landing limits, and relative criterion priority weights.',
       view: 'setup' as ViewId,
     },
@@ -86,13 +96,17 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
       step: 2,
       title: 'Lunar Map',
       tag: 'STEP 2',
+      status: 'Planned',
+      statusClass: 'status-badge-planned',
       desc: 'Visualize candidate landing locations in polar stereographic projection against lunar terrain.',
       view: 'map' as ViewId,
     },
     {
       step: 3,
-      title: 'Site Evaluation',
+      title: 'Feasibility Evaluation',
       tag: 'STEP 3',
+      status: 'In Development',
+      statusClass: 'status-badge-dev',
       desc: 'Filter candidates through pass/marginal physical constraints to eliminate non-compliant sites.',
       view: 'sites' as ViewId,
     },
@@ -100,13 +114,17 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
       step: 4,
       title: 'TOPSIS Ranking',
       tag: 'STEP 4',
+      status: 'Engine Development',
+      statusClass: 'status-badge-engine',
       desc: 'Score eligible candidate sites by geometric closeness to the multi-criteria ideal solution.',
       view: 'results' as ViewId,
     },
     {
       step: 5,
-      title: 'Robustness Analysis',
+      title: 'Monte Carlo Robustness',
       tag: 'STEP 5',
+      status: 'Planned',
+      statusClass: 'status-badge-planned',
       desc: 'Simulate sensor noise and weight fluctuations across 2,000 iterations to measure ranking stability.',
       view: 'robustness' as ViewId,
     },
@@ -114,6 +132,8 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
       step: 6,
       title: 'Final Recommendation',
       tag: 'STEP 6',
+      status: 'Planned',
+      statusClass: 'status-badge-planned',
       desc: 'Synthesize primary and contingency landing sites with documented engineering trade-offs.',
       view: 'results' as ViewId,
     },
@@ -149,7 +169,18 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
               className="btn btn--secondary btn--large"
               onClick={() => onNavigate('map')}
             >
-              View Interactive Lunar Map ↗
+              Open Lunar Map ↗
+            </button>
+            <button
+              type="button"
+              className="btn btn--secondary btn--large"
+              onClick={() => {
+                const el = document.getElementById('heading-workflow')
+                if (el) el.scrollIntoView({ behavior: 'smooth' })
+                else onNavigate('about')
+              }}
+            >
+              Explore Project Workflow ↓
             </button>
           </div>
         </div>
@@ -166,7 +197,7 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
             <span className="status-label font-mono">SYSTEM OPERATIONAL STATUS</span>
             <span className="status-badge-live">
               <span className="pulse-dot" aria-hidden="true" />
-              SYSTEM ACTIVE · SHELL IN DEVELOPMENT
+              SYSTEM ACTIVE · DASHBOARD AVAILABLE
             </span>
           </div>
           <div className="status-col">
@@ -197,7 +228,7 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
               >
                 <div className="workflow-step-header">
                   <span className="step-tag font-mono">{ws.tag}</span>
-                  <span className="step-number">{ws.step}</span>
+                  <span className={`status-badge-pill ${ws.statusClass}`}>{ws.status}</span>
                 </div>
                 <h3 className="step-title">{ws.title}</h3>
                 <p className="step-desc">{ws.desc}</p>
@@ -229,6 +260,7 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
         <div className="modules-status-grid">
           {moduleStatuses.map((m) => {
             let badgeClass = 'status-badge-planned'
+            if (m.statusType === 'available') badgeClass = 'status-badge-available'
             if (m.statusType === 'in-development') badgeClass = 'status-badge-dev'
             if (m.statusType === 'engine') badgeClass = 'status-badge-engine'
             if (m.statusType === 'pending') badgeClass = 'status-badge-pending'

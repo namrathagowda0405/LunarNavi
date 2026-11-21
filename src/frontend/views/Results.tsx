@@ -27,10 +27,16 @@ export function Results({
     return (
       <div className="view-container">
         <header className="view-header">
-          <div className="section-tag">ANALYSIS RESULTS</div>
-          <h1 className="view-title">Decision Results</h1>
+          <div className="section-tag">MULTI-CRITERIA EVALUATION</div>
+          <div className="title-row">
+            <h1 className="view-title">Results & Ranking</h1>
+            <span className="status-chip status-chip--engine-ready" role="status">
+              <span className="status-chip__dot" aria-hidden="true" />
+              <span className="status-chip__text">Engine Development</span>
+            </span>
+          </div>
           <p className="view-description">
-            Evaluate candidate landing sites against mission constraints, multi-criteria weights, and robustness simulations.
+            Mission-specific site rankings will be generated using the evaluation engine (TOPSIS ranking and feasibility filtering) when the candidate dataset and pipeline are ready.
           </p>
         </header>
 

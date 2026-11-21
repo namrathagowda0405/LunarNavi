@@ -8,33 +8,38 @@ export function LunarMap({ onNavigate }: LunarMapProps) {
   const plannedFeatures = [
     {
       icon: '🔍',
-      title: 'Dynamic Zoom & Pan',
+      title: 'Interactive Zoom & Pan',
       description: 'Continuous navigation across lunar south polar stereographic projections down to high-resolution landing zones.',
     },
     {
       icon: '🧭',
-      title: 'Precision Coordinate Readout',
+      title: 'Lunar Coordinate Grid',
       description: 'Live lunar latitude and longitude tracking formatted to the Mean Earth / Polar Axis (ME) coordinate convention.',
     },
     {
       icon: '📍',
-      title: 'Candidate-Site Overlays',
-      description: 'Interactive reference markers placed at documented crater rims, connecting ridges, and plateau targets.',
+      title: 'Candidate-Site Markers',
+      description: 'Interactive reference markers placed at verified candidate crater rims, connecting ridges, and plateau targets.',
     },
     {
       icon: '📊',
-      title: 'Click-to-Inspect Site Profiles',
+      title: 'Clickable Site Information',
       description: 'Selecting any marker opens an in-depth telemetry card with slope angles, solar illumination, and feasibility limits.',
     },
     {
       icon: '🌑',
-      title: 'Multi-Layer Terrain GIS',
-      description: 'Toggleable data layers including LOLA elevation DEM, surface slope roughness, and multi-year solar illumination models.',
+      title: 'Terrain Layers',
+      description: 'Toggleable digital elevation models (LOLA DEM) and surface slope roughness maps.',
     },
     {
-      icon: '🛡️',
-      title: 'Visual Constraint Boundaries',
-      description: 'Real-time color-coded shading indicating pass, marginal, and fail zones according to active mission limits.',
+      icon: '☀️',
+      title: 'Illumination Visualization',
+      description: 'Multi-year orbital solar illumination models showing seasonal sunlight persistence across polar target ridges.',
+    },
+    {
+      icon: '🧪',
+      title: 'Resource & Scientific Overlays',
+      description: 'Data layers showing water ice and volatile potential (neutron spectrometer) alongside high-value sampling targets.',
     },
   ]
 
@@ -47,7 +52,7 @@ export function LunarMap({ onNavigate }: LunarMapProps) {
           <h1 className="view-title">Interactive Lunar Map</h1>
           <span className="status-chip status-chip--planned" role="status">
             <span className="status-chip__dot" aria-hidden="true" />
-            <span className="status-chip__text">Planned · Milestone UI-3</span>
+            <span className="status-chip__text">MAP ENGINE — PLANNED</span>
           </span>
         </div>
         <p className="view-description">
@@ -79,7 +84,7 @@ export function LunarMap({ onNavigate }: LunarMapProps) {
             <span className="map-control-pill font-mono">DATUM: MOON 2000 (R = 1737.4 km)</span>
           </div>
           <div className="map-viewport-status font-mono">
-            STATUS: <span className="text-amber">VIEWPORT READY · TILES PENDING</span>
+            STATUS: <span className="text-amber">MAP ENGINE — PLANNED · TILES PENDING</span>
           </div>
         </div>
 

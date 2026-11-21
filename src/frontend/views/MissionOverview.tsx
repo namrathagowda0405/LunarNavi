@@ -12,7 +12,13 @@ export function AboutLunarNavi() {
         </div>
         <div className="hero-content">
           <div className="section-tag">MISSION-AWARE DECISION SUPPORT</div>
-          <h1 id="hero-heading" className="hero-title">About LunarNavi</h1>
+          <div className="title-row">
+            <h1 id="hero-heading" className="hero-title">About LunarNavi</h1>
+            <span className="status-chip status-chip--available" role="status">
+              <span className="status-chip__dot" aria-hidden="true" />
+              <span className="status-chip__text">Available</span>
+            </span>
+          </div>
           <p className="hero-description">
             LunarNavi assists space exploration teams in evaluating, comparing, and de-risking
             candidate lunar landing sites. It combines multi-criteria optimization, strict physical

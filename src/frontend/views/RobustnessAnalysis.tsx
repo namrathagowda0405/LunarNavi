@@ -31,15 +31,14 @@ export function RobustnessAnalysis({ onNavigate }: RobustnessAnalysisProps) {
       <header className="view-header">
         <div className="section-tag">PROBABILISTIC DECISION SENSITIVITY</div>
         <div className="title-row">
-          <h1 className="view-title">Robustness Analysis (Monte Carlo)</h1>
-          <span className="status-chip status-chip--engine-ready" role="status">
+          <h1 className="view-title">Robustness Analysis</h1>
+          <span className="status-chip status-chip--planned" role="status">
             <span className="status-chip__dot" aria-hidden="true" />
-            <span className="status-chip__text">Engine Built · Dataset Pending</span>
+            <span className="status-chip__text">Planned</span>
           </span>
         </div>
         <p className="view-description">
-          The Monte Carlo simulation engine tests the stability and resilience of candidate lunar landing site recommendations
-          across thousands of synthetic variations modeled on instrument measurement noise and weighting uncertainty.
+          Monte Carlo simulations and sensitivity analysis will examine how stable rankings are under weight variation and measurement uncertainty.
         </p>
       </header>
 

@@ -17,12 +17,11 @@ export function CandidateSites() {
         <div className="section-tag">DATASET STATUS</div>
         <div className="title-row">
           <h1 className="view-title">Candidate Sites</h1>
-          <StatusChip status="in-preparation" customLabel="Dataset being researched" />
+          <StatusChip status="in-preparation" customLabel="Pending Verification" />
         </div>
         <p className="view-description">
-          Candidate landing sites represent candidate target regions on the lunar surface.
-          Each site holds verified topographical, scientific, and communications data along with
-          traceable uncertainty bounds.
+          Verified candidate landing-site coordinates and site information will appear here once the curated lunar dataset is verified.
+          Each candidate site will hold verified topographical, scientific, and communications data along with traceable uncertainty bounds.
         </p>
       </header>
 
