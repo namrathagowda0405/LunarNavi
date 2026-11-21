@@ -5,83 +5,7 @@ interface OverviewDashboardProps {
   onNavigate: (view: ViewId) => void
 }
 
-interface ModuleStatusItem {
-  id: string
-  name: string
-  status: string
-  statusType: 'available' | 'in-development' | 'planned' | 'engine' | 'pending'
-  detail: string
-  actionView?: ViewId
-}
-
 export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
-  // Exact module status entries specified in Milestone UI-1 requirements
-  const moduleStatuses: ModuleStatusItem[] = [
-    {
-      id: 'app-dashboard',
-      name: 'Application Dashboard',
-      status: 'Available',
-      statusType: 'available',
-      detail: 'Dark lunar mission-control interface, responsive layout, workflow tracking, and navigation.',
-    },
-    {
-      id: 'mission-setup',
-      name: 'Mission Setup',
-      status: 'Operational',
-      statusType: 'available',
-      detail: 'Configure mission purpose, calendar arrival schedule, stay duration, and internal criteria priorities.',
-      actionView: 'setup',
-    },
-    {
-      id: 'lunar-map',
-      name: 'Interactive Lunar Map',
-      status: 'Available',
-      statusType: 'available',
-      detail: 'Authentic NASA LOLA DEM polar stereographic map with interactive pan/zoom, live cursor elevation, and verified candidate overlays.',
-      actionView: 'map',
-    },
-    {
-      id: 'candidate-data',
-      name: 'Candidate Site Data',
-      status: 'Verified (16 Sites)',
-      statusType: 'available',
-      detail: 'Curated lunar south pole sites with verified IAU DE421 coordinates, multi-criteria telemetry, and bounds.',
-      actionView: 'sites',
-    },
-    {
-      id: 'feasibility-engine',
-      name: 'Feasibility Engine',
-      status: 'Operational',
-      statusType: 'available',
-      detail: 'Deterministic filtering of candidate sites against non-negotiable mission constraints (pass/marginal/fail/unknown).',
-      actionView: 'sites',
-    },
-    {
-      id: 'topsis-ranking',
-      name: 'TOPSIS Ranking',
-      status: 'Operational',
-      statusType: 'available',
-      detail: 'Multi-criteria geometric distance ranking engine using positive-ideal and negative-ideal benchmarks.',
-      actionView: 'results',
-    },
-    {
-      id: 'monte-carlo',
-      name: 'Monte Carlo Analysis',
-      status: 'Operational',
-      statusType: 'available',
-      detail: 'Probabilistic simulation perturbing measurement noise and stakeholder weights to measure ranking stability.',
-      actionView: 'robustness',
-    },
-    {
-      id: 'nasa-data',
-      name: 'NASA Data Integration',
-      status: 'Verified (6 Archives)',
-      statusType: 'available',
-      detail: 'Orbiter instrument datasets from LOLA (elevation/slope), PGDA illumination, and Diviner polar observations.',
-      actionView: 'data-sources',
-    },
-  ]
-
   const workflowSteps = [
     {
       step: 1,
@@ -244,48 +168,6 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
               )}
             </div>
           ))}
-        </div>
-      </section>
-
-      {/* Module Development Progress & Honest Status Indicators */}
-      <section className="panel" aria-labelledby="heading-modules">
-        <div className="panel-header">
-          <span className="panel-tag">DEVELOPMENT PROGRESS</span>
-          <h2 id="heading-modules" className="panel-title">Module Status & Capability Roadmap</h2>
-          <p className="panel-subtitle">
-            Honest tracking of active implementation stages. Unfinished modules are clearly disclosed.
-          </p>
-        </div>
-
-        <div className="modules-status-grid">
-          {moduleStatuses.map((m) => {
-            let badgeClass = 'status-badge-planned'
-            if (m.statusType === 'available') badgeClass = 'status-badge-available'
-            if (m.statusType === 'in-development') badgeClass = 'status-badge-dev'
-            if (m.statusType === 'engine') badgeClass = 'status-badge-engine'
-            if (m.statusType === 'pending') badgeClass = 'status-badge-pending'
-
-            return (
-              <article key={m.id} className="module-status-card">
-                <div className="module-status-card__header">
-                  <h3 className="module-name">{m.name}</h3>
-                  <span className={`status-badge-pill ${badgeClass}`}>
-                    {m.status}
-                  </span>
-                </div>
-                <p className="module-detail">{m.detail}</p>
-                {m.actionView && (
-                  <button
-                    type="button"
-                    className="module-card-link font-mono"
-                    onClick={() => onNavigate(m.actionView!)}
-                  >
-                    View Section →
-                  </button>
-                )}
-              </article>
-            )
-          })}
         </div>
       </section>
     </div>

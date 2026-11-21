@@ -1,33 +1,60 @@
 import { CriterionId } from '../engine/types'
 
-export type MissionTypeId = 'science' | 'resource' | 'crewed' | 'communication'
+export type MissionTypeId = 'resource' | 'science' | 'crewed' | 'communication'
 
 export interface MissionTypeOption {
-  id: MissionTypeId
+  id: string
   label: string
   description: string
+  enabled: boolean
+  disabledReason?: string
 }
 
 export const MISSION_TYPES: MissionTypeOption[] = [
   {
-    id: 'science',
-    label: 'Science',
-    description: 'Prioritises the scientific value of the site.',
+    id: 'resource',
+    label: 'Water-Ice Prospecting & Resource Exploration',
+    description: 'Prioritizes volatile presence, proximity to permanently shadowed cold traps, and In-Situ Resource Utilization (ISRU) feasibility.',
+    enabled: true,
   },
   {
-    id: 'resource',
-    label: 'Resource Exploration',
-    description: 'Prioritises potential access to lunar resources.',
+    id: 'science',
+    label: 'Lunar Scientific Exploration',
+    description: 'Prioritizes sampling of South Pole-Aitken (SPA) basin ejecta, ancient crustal massifs, and planetary science return.',
+    enabled: true,
   },
   {
     id: 'crewed',
-    label: 'Crewed Base',
-    description: 'Prioritises conditions for a crewed surface base.',
+    label: 'Lunar Surface Infrastructure & Habitat Development',
+    description: 'Prioritizes Human Landing System (HLS) touchdown stability (slope ≤ 8°), sustained solar array power, and direct Earth communications.',
+    enabled: true,
   },
   {
     id: 'communication',
-    label: 'Communication',
-    description: 'Prioritises communication visibility.',
+    label: 'Communications Relay Infrastructure',
+    description: 'Prioritizes elevated topographic plateaus and peaks with continuous line-of-sight Earth visibility (≥ 70%) for polar telecom relays.',
+    enabled: true,
+  },
+  {
+    id: 'rover',
+    label: 'Rover-Based Surface Exploration',
+    description: 'Long-range autonomous rover surface traverses between shadowed cold traps and illuminated charging stations.',
+    enabled: false,
+    disabledReason: 'Continuous micro-slope traverse pathfinding algorithms require sub-meter DEM tiles not bundled in current polar coverage.',
+  },
+  {
+    id: 'astronomy',
+    label: 'Astronomy & Scientific Observation',
+    description: 'Deep-space optical observatories and low-frequency radio astronomy installations.',
+    enabled: false,
+    disabledReason: 'Radio astronomy requires lunar far-side radio-frequency interference (RFI) shielding models; not supported by south-pole nearside line-of-sight data.',
+  },
+  {
+    id: 'cargo',
+    label: 'Cargo Landing & Equipment Deployment',
+    description: 'Heavy-lift uncrewed logistics landers and modular infrastructure delivery.',
+    enabled: false,
+    disabledReason: 'Heavy payload surface plume-regolith blast interaction models require discrete CFD boundary datasets not supported in current release.',
   },
 ]
 

@@ -129,7 +129,7 @@ export function CandidateSites({
               className="btn btn--secondary btn--small"
               onClick={() => onNavigate('setup')}
             >
-              Modify Constraints in Setup →
+              Change Mission Objective in Setup →
             </button>
           )}
         </div>

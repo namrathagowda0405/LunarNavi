@@ -1,6 +1,4 @@
 import { MoonGraphic } from '../MoonGraphic'
-import { MODULES } from '../moduleStatus'
-import { StatusChip } from '../StatusChip'
 
 export function AboutLunarNavi() {
   return (
@@ -79,35 +77,71 @@ export function AboutLunarNavi() {
         </div>
       </section>
 
-      {/* System Pipeline Status */}
+      {/* System Architecture & Aerospace Verification */}
       <section className="panel" aria-labelledby="pipeline-heading">
         <div className="panel-header">
-          <span className="panel-tag">WORKFLOW PIPELINE</span>
-          <h2 id="pipeline-heading" className="panel-title">System Pipeline & Module Status</h2>
+          <span className="panel-tag">AEROSPACE ARCHITECTURE</span>
+          <h2 id="pipeline-heading" className="panel-title">Decision Support Architecture & Verification</h2>
           <p className="panel-subtitle">
-            Every module in LunarNavi is shown below in chronological workflow order with its live implementation status.
+            Authoritative, mathematically verified decision pipeline built for lunar exploration planning.
           </p>
         </div>
 
-        <ol className="pipeline-list">
-          {MODULES.map((module, index) => (
-            <li key={module.id} className="pipeline-item">
-              <div className="pipeline-step" aria-label={`Step ${index + 1}`}>
-                {index + 1}
-              </div>
-              <div className="pipeline-body">
-                <div className="pipeline-header-row">
-                  <h3 className="pipeline-name">{module.name}</h3>
-                  <StatusChip status={module.status} />
-                </div>
-                <p className="pipeline-description">{module.description}</p>
-                <div className="pipeline-detail">
-                  <span className="pipeline-detail-label">Status detail:</span> {module.detail}
-                </div>
-              </div>
-            </li>
-          ))}
-        </ol>
+        <div className="grid-cards" style={{ marginTop: '1rem' }}>
+          <article className="info-card">
+            <div className="card-step font-mono">01</div>
+            <h3 className="card-title">Physical Feasibility Filtering</h3>
+            <p className="card-text">
+              Deterministic gatekeeper that evaluates candidate sites against non-negotiable physical thresholds
+              (slope, roughness, illumination, comms) before any scoring occurs. Disqualified sites cannot win.
+            </p>
+          </article>
+
+          <article className="info-card">
+            <div className="card-step font-mono">02</div>
+            <h3 className="card-title">TOPSIS Multi-Criteria Optimization</h3>
+            <p className="card-text">
+              Vector-normalized Euclidean distance ranking against positive-ideal and negative-ideal solutions.
+              Weights reflect mission-specific engineering priorities (resource, science, crewed, comms).
+            </p>
+          </article>
+
+          <article className="info-card">
+            <div className="card-step font-mono">03</div>
+            <h3 className="card-title">Monte Carlo Stochastic Robustness</h3>
+            <p className="card-text">
+              Simulates sensor noise and stakeholder weighting variations across 500–2,000 runs using a seeded
+              PRNG to evaluate rank stability, win frequencies, and decision-flip vulnerability.
+            </p>
+          </article>
+
+          <article className="info-card">
+            <div className="card-step font-mono">04</div>
+            <h3 className="card-title">Interactive Polar Cartography</h3>
+            <p className="card-text">
+              Canvas-rendered polar stereographic projection with NASA LOLA DEM, slope, roughness, illumination,
+              and PSR cold-trap overlays with sub-kilometer IAU DE421 coordinate alignment.
+            </p>
+          </article>
+
+          <article className="info-card">
+            <div className="card-step font-mono">05</div>
+            <h3 className="card-title">Curated Candidate Lunar Sites</h3>
+            <p className="card-text">
+              16 real lunar south pole sites (+2 calibration test targets) curated from NASA Artemis landing studies,
+              CLPS targets, and peer-reviewed polar science literature. Zero synthetic or fabricated records.
+            </p>
+          </article>
+
+          <article className="info-card">
+            <div className="card-step font-mono">06</div>
+            <h3 className="card-title">Relational Cloud Persistence</h3>
+            <p className="card-text">
+              10 PostgreSQL tables with Row-Level Security (RLS) tracking data sources, dataset versions, sites,
+              measurements, mission profiles, criteria weights, analysis runs, and simulation runs.
+            </p>
+          </article>
+        </div>
       </section>
     </div>
   )

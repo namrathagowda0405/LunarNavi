@@ -36,7 +36,7 @@ export interface MissionProfile {
 export const DEFAULT_MISSION_PROFILES: Record<string, MissionProfile> = {
   science: {
     id: 'mission-science',
-    name: 'Science Mission',
+    name: 'Lunar Scientific Exploration',
     description:
       'Exploration profile prioritizing planetary science return, geologic sampling of the South Pole-Aitken basin, and ancient crustal terrain with rover mobility and instrument downlink.',
     weights: {
@@ -92,7 +92,7 @@ export const DEFAULT_MISSION_PROFILES: Record<string, MissionProfile> = {
   },
   resource: {
     id: 'mission-resource',
-    name: 'Resource Exploration',
+    name: 'Water-Ice Prospecting & Resource Exploration',
     description:
       'Prospecting profile prioritizing proximity to permanently shadowed regions (PSRs), water ice cold traps, and volatile deposits for in-situ resource utilization.',
     weights: {
@@ -140,7 +140,7 @@ export const DEFAULT_MISSION_PROFILES: Record<string, MissionProfile> = {
   },
   crewed: {
     id: 'mission-crewed',
-    name: 'Crewed Base',
+    name: 'Lunar Surface Infrastructure & Habitat Development',
     description:
       'Human lunar surface outpost profile with strict terrain safety, sustained solar illumination, and continuous direct-to-Earth astronaut safety communications.',
     weights: {
@@ -196,7 +196,7 @@ export const DEFAULT_MISSION_PROFILES: Record<string, MissionProfile> = {
   },
   communication: {
     id: 'mission-communication',
-    name: 'Communication Mission',
+    name: 'Communications Relay Infrastructure',
     description:
       'Polar communications hub profile maximizing continuous Earth line-of-sight visibility, elevated terrain platform stability, and uninterrupted power for telecom relays.',
     weights: {

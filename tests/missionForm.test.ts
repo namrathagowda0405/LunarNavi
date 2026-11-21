@@ -115,7 +115,7 @@ describe('buildMissionProfile', () => {
     expect(result.errors).toEqual([])
     expect(result.profile).not.toBeNull()
     expect(result.profile?.id).toBe('mission-science')
-    expect(result.profile?.name).toBe('Science Profile')
+    expect(result.profile?.name).toBe('Lunar Scientific Exploration Profile')
     expect(result.profile?.constraints).toEqual([])
 
     // Weights sum to 1

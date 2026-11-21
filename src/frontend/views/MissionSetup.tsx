@@ -32,14 +32,17 @@ export function MissionSetup({
   const currentRationale = MISSION_WEIGHT_RATIONALE[formState.missionType]
 
   // Handlers for Mission Type
-  const handleTypeSelect = (typeId: MissionTypeId) => {
-    const preset = getMissionPresetState(typeId, {
+  const handleTypeSelect = (typeId: string) => {
+    const opt = MISSION_TYPES.find((t) => t.id === typeId)
+    if (!opt || !opt.enabled) return
+    const validId = typeId as MissionTypeId
+    const preset = getMissionPresetState(validId, {
       arrivalDate: formState.arrivalDate,
       arrivalWindowDays: formState.arrivalWindowDays,
     })
     onFormChange({
       ...formState,
-      missionType: typeId,
+      missionType: validId,
       durationDays: preset.durationDays,
       rawWeights: preset.rawWeights,
       constraints: preset.constraints,
@@ -52,13 +55,6 @@ export function MissionSetup({
     onFormChange({
       ...formState,
       arrivalDate: e.target.value,
-    })
-  }
-
-  const handleArrivalWindowChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    onFormChange({
-      ...formState,
-      arrivalWindowDays: Number(e.target.value),
     })
   }
 
@@ -93,7 +89,6 @@ export function MissionSetup({
 
   const currentDuration = formState.durationDays ?? DEFAULT_MISSION_DURATIONS[formState.missionType] ?? 14
   const currentArrival = formState.arrivalDate ?? '2027-06-01'
-  const currentWindow = formState.arrivalWindowDays ?? 7
 
   return (
     <div className="view-container">
@@ -126,16 +121,21 @@ export function MissionSetup({
         <div className="mission-type-grid" role="radiogroup" aria-labelledby="heading-mission-type">
           {MISSION_TYPES.map((type) => {
             const isSelected = formState.missionType === type.id
+            const isEnabled = type.enabled
             const inputId = `mission-type-${type.id}`
             return (
               <div
                 key={type.id}
-                className={`mission-type-card ${isSelected ? 'mission-type-card--selected' : ''}`}
-                onClick={() => handleTypeSelect(type.id)}
-                role="button"
-                tabIndex={0}
+                className={`mission-type-card ${isSelected ? 'mission-type-card--selected' : ''} ${!isEnabled ? 'mission-type-card--disabled' : ''}`}
+                style={!isEnabled ? { opacity: 0.65, cursor: 'not-allowed' } : {}}
+                onClick={() => {
+                  if (isEnabled) handleTypeSelect(type.id)
+                }}
+                role={isEnabled ? 'button' : undefined}
+                tabIndex={isEnabled ? 0 : -1}
+                aria-disabled={!isEnabled}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
+                  if (isEnabled && (e.key === 'Enter' || e.key === ' ')) {
                     e.preventDefault()
                     handleTypeSelect(type.id)
                   }
@@ -148,10 +148,13 @@ export function MissionSetup({
                     name="mission-type"
                     value={type.id}
                     checked={isSelected}
-                    onChange={() => handleTypeSelect(type.id)}
+                    disabled={!isEnabled}
+                    onChange={() => {
+                      if (isEnabled) handleTypeSelect(type.id)
+                    }}
                     className="radio-control"
                   />
-                  <label htmlFor={inputId} className="mission-type-card__title" style={{ cursor: 'pointer' }}>
+                  <label htmlFor={inputId} className="mission-type-card__title" style={{ cursor: isEnabled ? 'pointer' : 'not-allowed' }}>
                     {type.label}
                   </label>
                 </div>
@@ -159,6 +162,21 @@ export function MissionSetup({
                 {isSelected && (
                   <div style={{ marginTop: '0.4rem', fontSize: '0.75rem', color: 'var(--accent-teal)' }}>
                     ✓ Predefined Profile Active
+                  </div>
+                )}
+                {!isEnabled && type.disabledReason && (
+                  <div
+                    style={{
+                      marginTop: '0.5rem',
+                      paddingTop: '0.4rem',
+                      borderTop: '1px solid var(--border-subtle)',
+                      fontSize: '0.75rem',
+                      color: 'var(--text-muted)',
+                      lineHeight: '1.4',
+                    }}
+                  >
+                    <span style={{ color: 'var(--status-marginal-text)', fontWeight: 600 }}>[Model Not Bundled]</span>{' '}
+                    {type.disabledReason}
                   </div>
                 )}
               </div>
@@ -317,7 +335,7 @@ export function MissionSetup({
           </p>
         </div>
 
-        <div className="mission-schedule-grid">
+        <div className="mission-schedule-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
           {/* Planned Arrival Date */}
           <div className="form-group">
             <label htmlFor="arrival-date-input" className="form-label">
@@ -338,27 +356,6 @@ export function MissionSetup({
             </p>
           </div>
 
-          {/* Arrival Window Flexibility */}
-          <div className="form-group">
-            <label htmlFor="arrival-window-select" className="form-label">
-              Arrival Window Flexibility
-            </label>
-            <select
-              id="arrival-window-select"
-              className="form-select font-mono"
-              value={currentWindow}
-              onChange={handleArrivalWindowChange}
-            >
-              <option value="0">Exact Target Date (±0 days)</option>
-              <option value="6">Standard Orbital Window (±3 days)</option>
-              <option value="14">Extended Launch Period (±7 days)</option>
-              <option value="30">Seasonal Launch Window (±15 days)</option>
-            </select>
-            <p className="form-hint">
-              Accounts for launch vehicle slips and lunar orbital transfer windows.
-            </p>
-          </div>
-
           {/* Surface Mission Duration */}
           <div className="form-group">
             <label htmlFor="duration-input" className="form-label">
@@ -374,7 +371,7 @@ export function MissionSetup({
               onChange={(e) => handleDurationChange(Math.max(1, parseInt(e.target.value) || 1))}
               required
             />
-            <div className="duration-presets" role="group" aria-label="Quick duration presets">
+            <div className="duration-presets" role="group" aria-label="Quick duration presets" style={{ marginTop: '0.4rem' }}>
               <button
                 type="button"
                 className={`duration-chip ${currentDuration === 14 ? 'duration-chip--active' : ''}`}
@@ -420,24 +417,6 @@ export function MissionSetup({
               • <strong>Dataset Boundary</strong>: Evaluated illumination and Earth visibility metrics are derived from NASA PGDA Product 69 (18.6-year multi-year precession cycle simulation). Instantaneous hour-by-hour calendar date shadow casting requires SPICE orbit kernels not bundled in the client.
             </p>
           </div>
-        </div>
-      </section>
-
-      {/* Target Geographic Scope Badge */}
-      <section className="form-section panel" style={{ padding: '1rem 1.25rem' }} aria-label="Target Geographic Scope">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <div>
-            <span className="section-tag" style={{ marginBottom: '0.2rem' }}>TARGET REGION COVERAGE</span>
-            <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-              Lunar South Polar Region (80°S – 90°S)
-            </div>
-            <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-              Evaluation is locked to the high-resolution NASA PDS, LOLA, and Diviner scientific coverage zone.
-            </p>
-          </div>
-          <span className="status-pill status-pill--pass font-mono" style={{ fontSize: '0.75rem' }}>
-            NASA PDS High-Res Grid Active
-          </span>
         </div>
       </section>
 
