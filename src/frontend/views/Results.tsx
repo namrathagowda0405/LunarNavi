@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { CRITERION_IDS } from '../../engine/types'
 import { MissionProfile, getDefaultMissionProfile } from '../../engine/mission'
 import { rankSites, TopsisScore } from '../../engine/topsis'
 import { filterFeasibleSites, evaluateAllSites } from '../../engine/feasibility'
 import { runMonteCarlo, MonteCarloResult } from '../../engine/montecarlo'
+import { saveAnalysisRun } from '../../services/analysisService'
 import {
   CANDIDATE_SITES,
   CentralizedSite,
@@ -123,6 +124,57 @@ export function Results({
       (a, b) => (activeMission.weights[b] ?? 0) - (activeMission.weights[a] ?? 0)
     )
   }, [activeMission.weights])
+
+  // Automatically log/persist analysis run to Supabase (or session ledger fallback)
+  useEffect(() => {
+    if (!topScore) return
+    const topSummary = topScore ? mcStatsMap.get(topScore.id) : undefined
+    saveAnalysisRun({
+      missionId: activeMission.id,
+      missionType: formState.missionType,
+      weights: activeMission.weights,
+      constraints: activeMission.constraints,
+      totalSitesEvaluated: centralizedSites.length,
+      feasibleSitesCount: feasibleSites.length,
+      primarySiteId: topScore.id,
+      primaryScore: topScore.closeness,
+      backupSiteId: backupSite?.id,
+      rankings: rankingResult.ranking.map((r, idx) => ({
+        id: r.id,
+        rank: idx + 1,
+        closeness: r.closeness,
+        distanceToIdeal: r.distanceToIdeal,
+        distanceToAntiIdeal: r.distanceToAntiIdeal,
+      })),
+      simulationParameters: {
+        iterations: 500,
+        weightRelativeSpread: 0.15,
+        seed: 42,
+      },
+      monteCarloSummary: topSummary
+        ? {
+            topSiteId: topScore.id,
+            topSiteWinRate: topSummary.winRate,
+            topSiteTop3Rate: topSummary.top3Rate,
+            nominalRank: 1,
+          }
+        : undefined,
+    }).catch(() => {
+      // Non-blocking background persistence
+    })
+  }, [
+    activeMission.id,
+    activeMission.weights,
+    activeMission.constraints,
+    formState.missionType,
+    topScore?.id,
+    topScore?.closeness,
+    backupSite?.id,
+    feasibleSites.length,
+    centralizedSites.length,
+    rankingResult.ranking,
+    mcStatsMap,
+  ])
 
   return (
     <div className="view-container">
