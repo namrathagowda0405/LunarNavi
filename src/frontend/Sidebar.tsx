@@ -1,6 +1,14 @@
 import type { ReactNode } from 'react'
 
-export type ViewId = 'setup' | 'results' | 'sites' | 'about' | 'data-sources'
+export type ViewId =
+  | 'overview'
+  | 'setup'
+  | 'map'
+  | 'sites'
+  | 'results'
+  | 'robustness'
+  | 'data-sources'
+  | 'about'
 
 interface NavItem {
   id: ViewId
@@ -15,6 +23,18 @@ interface SidebarProps {
 
 export function Sidebar({ activeView, onViewChange }: SidebarProps) {
   const navItems: NavItem[] = [
+    {
+      id: 'overview',
+      label: 'Overview',
+      icon: (
+        <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <rect x="3" y="3" width="7" height="9" />
+          <rect x="14" y="3" width="7" height="5" />
+          <rect x="14" y="12" width="7" height="9" />
+          <rect x="3" y="16" width="7" height="5" />
+        </svg>
+      ),
+    },
     {
       id: 'setup',
       label: 'Mission Setup',
@@ -33,12 +53,13 @@ export function Sidebar({ activeView, onViewChange }: SidebarProps) {
       ),
     },
     {
-      id: 'results',
-      label: 'Results',
+      id: 'map',
+      label: 'Lunar Map',
       icon: (
         <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-          <polyline points="22 4 12 14.01 9 11.01" />
+          <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
+          <line x1="8" y1="2" x2="8" y2="18" />
+          <line x1="16" y1="6" x2="16" y2="22" />
         </svg>
       ),
     },
@@ -53,6 +74,39 @@ export function Sidebar({ activeView, onViewChange }: SidebarProps) {
       ),
     },
     {
+      id: 'results',
+      label: 'Results & Ranking',
+      icon: (
+        <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+          <polyline points="22 4 12 14.01 9 11.01" />
+        </svg>
+      ),
+    },
+    {
+      id: 'robustness',
+      label: 'Robustness Analysis',
+      icon: (
+        <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M3 3v18h18" />
+          <path d="m19 9-5 5-4-4-3 3" />
+          <circle cx="14" cy="14" r="1" fill="currentColor" />
+          <circle cx="10" cy="10" r="1" fill="currentColor" />
+        </svg>
+      ),
+    },
+    {
+      id: 'data-sources',
+      label: 'Data & Sources',
+      icon: (
+        <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <ellipse cx="12" cy="5" rx="8" ry="3" />
+          <path d="M4 5v6c0 1.66 3.58 3 8 3s8-1.34 8-3V5" />
+          <path d="M4 11v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6" />
+        </svg>
+      ),
+    },
+    {
       id: 'about',
       label: 'About LunarNavi',
       icon: (
@@ -63,23 +117,12 @@ export function Sidebar({ activeView, onViewChange }: SidebarProps) {
         </svg>
       ),
     },
-    {
-      id: 'data-sources',
-      label: 'Data and Sources',
-      icon: (
-        <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <ellipse cx="12" cy="5" rx="8" ry="3" />
-          <path d="M4 5v6c0 1.66 3.58 3 8 3s8-1.34 8-3V5" />
-          <path d="M4 11v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6" />
-        </svg>
-      ),
-    },
   ]
 
   return (
     <nav className="sidebar-nav" aria-label="Main Navigation">
       <div className="sidebar-header">
-        <span className="sidebar-title">NAVIGATION</span>
+        <span className="sidebar-title">DECISION SUPPORT</span>
       </div>
       <ul className="nav-list">
         {navItems.map((item) => {

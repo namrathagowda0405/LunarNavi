@@ -1,16 +1,19 @@
 import { useState } from 'react'
 import { Sidebar, ViewId } from './frontend/Sidebar'
+import { OverviewDashboard } from './frontend/views/OverviewDashboard'
 import { MissionSetup } from './frontend/views/MissionSetup'
-import { Results } from './frontend/views/Results'
+import { LunarMap } from './frontend/views/LunarMap'
 import { CandidateSites } from './frontend/views/CandidateSites'
-import { AboutLunarNavi } from './frontend/views/MissionOverview'
+import { Results } from './frontend/views/Results'
+import { RobustnessAnalysis } from './frontend/views/RobustnessAnalysis'
 import { DataAndSources } from './frontend/views/DataAndSources'
+import { AboutLunarNavi } from './frontend/views/MissionOverview'
 import { defaultFormState, MissionFormState } from './frontend/missionForm'
 import { MissionProfile } from './engine/mission'
 
 export function App() {
-  // Default to Mission Setup as the first page
-  const [activeView, setActiveView] = useState<ViewId>('setup')
+  // Default to Overview Dashboard as the landing page
+  const [activeView, setActiveView] = useState<ViewId>('overview')
   // Form state preserved in application state across navigation
   const [formState, setFormState] = useState<MissionFormState>(defaultFormState)
   // Stored validated mission profile
@@ -57,6 +60,7 @@ export function App() {
         <Sidebar activeView={activeView} onViewChange={setActiveView} />
 
         <main id="main-content" className="app-content" tabIndex={-1}>
+          {activeView === 'overview' && <OverviewDashboard onNavigate={setActiveView} />}
           {activeView === 'setup' && (
             <MissionSetup
               formState={formState}
@@ -64,6 +68,8 @@ export function App() {
               onAnalyzeSuccess={handleAnalyzeSuccess}
             />
           )}
+          {activeView === 'map' && <LunarMap onNavigate={setActiveView} />}
+          {activeView === 'sites' && <CandidateSites />}
           {activeView === 'results' && (
             <Results
               formState={formState}
@@ -71,9 +77,9 @@ export function App() {
               onEditMission={() => setActiveView('setup')}
             />
           )}
-          {activeView === 'sites' && <CandidateSites />}
-          {activeView === 'about' && <AboutLunarNavi />}
+          {activeView === 'robustness' && <RobustnessAnalysis onNavigate={setActiveView} />}
           {activeView === 'data-sources' && <DataAndSources />}
+          {activeView === 'about' && <AboutLunarNavi />}
         </main>
       </div>
     </div>
