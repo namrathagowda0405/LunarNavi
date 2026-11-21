@@ -4077,6 +4077,102 @@ body {
   border-radius: 3px;
 }
 
+/* Mission Schedule & Duration Grid */
+.mission-schedule-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.25rem;
+  margin-top: 1rem;
+}
+
+.duration-presets {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+.duration-chip {
+  font-size: 0.775rem;
+  font-family: var(--font-mono);
+  padding: 0.35rem 0.65rem;
+  border-radius: 4px;
+  background-color: var(--bg-panel-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.duration-chip:hover {
+  border-color: var(--accent-teal);
+  color: var(--text-primary);
+  background-color: var(--bg-panel-hover);
+}
+
+.duration-chip--active {
+  border-color: var(--accent-teal);
+  background-color: rgba(45, 212, 191, 0.12);
+  color: var(--accent-teal);
+  font-weight: 600;
+}
+
+/* Collapsible Advanced Engineering Accordion */
+.advanced-accordion {
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background-color: var(--bg-panel);
+  margin: 1.5rem 0;
+  overflow: hidden;
+  transition: border-color 0.2s ease;
+}
+
+.advanced-accordion summary {
+  padding: 1.125rem 1.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  background-color: var(--bg-panel-elevated);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.advanced-accordion summary:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-panel-hover);
+}
+
+.advanced-accordion[open] summary {
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--accent-teal);
+  background-color: rgba(45, 212, 191, 0.04);
+}
+
+.advanced-accordion__badge {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+}
+
+.advanced-accordion[open] .advanced-accordion__badge {
+  background-color: rgba(45, 212, 191, 0.15);
+  color: var(--accent-teal);
+}
+
+.advanced-accordion-content {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
 /* Reduced Motion Mode */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

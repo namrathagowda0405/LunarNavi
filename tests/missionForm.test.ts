@@ -7,6 +7,7 @@ import {
   formatWeightShare,
   MissionFormState,
   FormConstraint,
+  getMissionPresetState,
 } from '../src/frontend/missionForm'
 
 describe('normalizeWeights', () => {
@@ -301,10 +302,13 @@ describe('buildMissionProfile', () => {
     expect(result.errors.some((e) => e.includes('All weights are zero'))).toBe(true)
   })
 
-  it('defaultFormState returns expected initial values', () => {
+  it('defaultFormState returns expected initial values including arrivalDate and durationDays', () => {
     const def = defaultFormState()
     expect(def.missionType).toBe('science')
     expect(def.region).toBe('south-pole')
+    expect(def.arrivalDate).toBe('2027-06-01')
+    expect(def.arrivalWindowDays).toBe(7)
+    expect(def.durationDays).toBe(14)
     expect(def.constraints).toEqual([])
     expect(def.rawWeights).toEqual({
       slope: 5,
@@ -316,10 +320,81 @@ describe('buildMissionProfile', () => {
     })
   })
 
+  it('getMissionPresetState assigns appropriate default operational durations per purpose', () => {
+    const science = getMissionPresetState('science')
+    const resource = getMissionPresetState('resource')
+    const crewed = getMissionPresetState('crewed')
+    const comms = getMissionPresetState('communication')
+
+    expect(science.durationDays).toBe(14)
+    expect(resource.durationDays).toBe(30)
+    expect(crewed.durationDays).toBe(30)
+    expect(comms.durationDays).toBe(180)
+  })
+
+  it('buildMissionProfile validates arrival date and rejects invalid dates', () => {
+    const emptyDateForm: MissionFormState = {
+      ...defaultFormState(),
+      arrivalDate: '   ',
+    }
+    const emptyRes = buildMissionProfile(emptyDateForm)
+    expect(emptyRes.ok).toBe(false)
+    expect(emptyRes.errors.some((e) => e.includes('arrival date is required'))).toBe(true)
+
+    const invalidDateForm: MissionFormState = {
+      ...defaultFormState(),
+      arrivalDate: 'invalid-date-string',
+    }
+    const invalidRes = buildMissionProfile(invalidDateForm)
+    expect(invalidRes.ok).toBe(false)
+    expect(invalidRes.errors.some((e) => e.includes('valid calendar date'))).toBe(true)
+  })
+
+  it('buildMissionProfile validates surface duration and rejects non-positive or extreme values', () => {
+    const zeroDurationForm: MissionFormState = {
+      ...defaultFormState(),
+      durationDays: 0,
+    }
+    const zeroRes = buildMissionProfile(zeroDurationForm)
+    expect(zeroRes.ok).toBe(false)
+    expect(zeroRes.errors.some((e) => e.includes('positive number between 1 and 730'))).toBe(true)
+
+    const negativeDurationForm: MissionFormState = {
+      ...defaultFormState(),
+      durationDays: -5,
+    }
+    const negRes = buildMissionProfile(negativeDurationForm)
+    expect(negRes.ok).toBe(false)
+
+    const excessiveDurationForm: MissionFormState = {
+      ...defaultFormState(),
+      durationDays: 1000,
+    }
+    const excessRes = buildMissionProfile(excessiveDurationForm)
+    expect(excessRes.ok).toBe(false)
+  })
+
+  it('buildMissionProfile incorporates arrival date and duration into profile description', () => {
+    const form: MissionFormState = {
+      ...defaultFormState(),
+      arrivalDate: '2028-04-12',
+      arrivalWindowDays: 6,
+      durationDays: 28,
+    }
+    const result = buildMissionProfile(form)
+    expect(result.ok).toBe(true)
+    expect(result.profile?.description).toContain('2028-04-12')
+    expect(result.profile?.description).toContain('±3d window')
+    expect(result.profile?.description).toContain('28 Earth days')
+  })
+
   it('does not mutate formState during profile building', () => {
     const form: MissionFormState = {
       missionType: 'resource',
       region: 'south-pole',
+      arrivalDate: '2027-06-01',
+      arrivalWindowDays: 7,
+      durationDays: 30,
       rawWeights: {
         slope: 8,
         roughness: 4,

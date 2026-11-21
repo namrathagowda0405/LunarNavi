@@ -1,7 +1,7 @@
 import { useState, useId } from 'react'
 import { CRITERION_IDS, CriterionId } from '../../engine/types'
 import { CRITERION_DIRECTION } from '../../engine/criteria'
-import { ConstraintDirection, MissionProfile } from '../../engine/mission'
+import { MissionProfile } from '../../engine/mission'
 import {
   CRITERION_DESCRIPTIONS,
   CRITERION_LABELS,
@@ -22,6 +22,7 @@ import {
   MissionFormState,
   normalizeWeights,
   suggestedDirection,
+  DEFAULT_MISSION_DURATIONS,
 } from '../missionForm'
 
 interface MissionSetupProps {
@@ -41,7 +42,7 @@ export function MissionSetup({
   const typeOpt = MISSION_TYPES.find((t) => t.id === formState.missionType)
   const currentRationale = MISSION_WEIGHT_RATIONALE[formState.missionType]
 
-  // Calculate normalized shares for live display
+  // Calculate normalized shares for live display in advanced settings
   let normalizedShares: Record<CriterionId, number> | null = null
   let weightsError: string | null = null
 
@@ -54,10 +55,14 @@ export function MissionSetup({
   // Handlers for Mission Type
   const handleLoadDefaults = (typeId?: MissionTypeId) => {
     const targetType = typeId ?? formState.missionType
-    const preset = getMissionPresetState(targetType)
+    const preset = getMissionPresetState(targetType, {
+      arrivalDate: formState.arrivalDate,
+      arrivalWindowDays: formState.arrivalWindowDays,
+    })
     onFormChange({
       ...formState,
       missionType: targetType,
+      durationDays: preset.durationDays,
       rawWeights: preset.rawWeights,
       constraints: preset.constraints,
     })
@@ -68,6 +73,28 @@ export function MissionSetup({
     handleLoadDefaults(typeId)
   }
 
+  // Handlers for Schedule & Duration
+  const handleArrivalDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onFormChange({
+      ...formState,
+      arrivalDate: e.target.value,
+    })
+  }
+
+  const handleArrivalWindowChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    onFormChange({
+      ...formState,
+      arrivalWindowDays: Number(e.target.value),
+    })
+  }
+
+  const handleDurationChange = (days: number) => {
+    onFormChange({
+      ...formState,
+      durationDays: days,
+    })
+  }
+
   // Handlers for Region
   const handleRegionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     onFormChange({
@@ -76,7 +103,7 @@ export function MissionSetup({
     })
   }
 
-  // Handlers for Sliders
+  // Handlers for Advanced Sliders
   const handleWeightChange = (cid: CriterionId, val: number) => {
     onFormChange({
       ...formState,
@@ -101,7 +128,7 @@ export function MissionSetup({
     })
   }
 
-  // Handlers for Constraints
+  // Handlers for Advanced Constraints
   const handleAddConstraint = () => {
     const defaultCid: CriterionId = 'slope'
     const newConstraint: FormConstraint = {
@@ -135,7 +162,6 @@ export function MissionSetup({
       constraints: formState.constraints.map((c) => {
         if (c.id !== id) return c
         const updated = { ...c, ...updates }
-        // If criterion changed and direction wasn't explicitly changed, auto-suggest direction
         if (updates.criterion && !updates.direction) {
           updated.direction = suggestedDirection(updates.criterion)
         }
@@ -149,7 +175,6 @@ export function MissionSetup({
     const result = buildMissionProfile(formState)
     if (!result.ok || !result.profile) {
       setErrors(result.errors)
-      // Scroll to error box if possible
       const el = document.getElementById(errorBoxId)
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
@@ -167,8 +192,13 @@ export function MissionSetup({
     setErrors([])
   }
 
+  const currentDuration = formState.durationDays ?? DEFAULT_MISSION_DURATIONS[formState.missionType] ?? 14
+  const currentArrival = formState.arrivalDate ?? '2027-06-01'
+  const currentWindow = formState.arrivalWindowDays ?? 7
+
   return (
     <div className="view-container">
+      {/* View Header */}
       <header className="view-header">
         <div className="section-tag">MISSION-AWARE DECISION CONFIGURATION</div>
         <div className="title-row">
@@ -179,25 +209,18 @@ export function MissionSetup({
           </span>
         </div>
         <p className="view-description">
-          Configure mission type, target region, physical constraints, and evaluation criteria weights for lunar landing site evaluation.
+          Define mission purpose, planned arrival date, and surface duration. Engineering priorities and safety constraints are mapped automatically.
         </p>
       </header>
 
-      {/* SECTION A: Mission Type */}
+      {/* SECTION 1: Mission Purpose (Required) */}
       <section className="form-section panel" aria-labelledby="heading-mission-type">
         <div className="panel-header">
-          <span className="panel-tag">SECTION A</span>
-          <h2 id="heading-mission-type" className="panel-title">1. Mission Type</h2>
+          <span className="panel-tag">REQUIRED INPUT 1</span>
+          <h2 id="heading-mission-type" className="panel-title">1. Mission Purpose</h2>
           <p className="panel-subtitle">
-            Select the high-level mission objective to label your profile.
+            Select your high-level mission objective. Each purpose automatically applies NASA-defensible criteria weights and safety limits.
           </p>
-        </div>
-
-        <div className="notice-banner notice-banner--info" role="note">
-          <span className="notice-icon" aria-hidden="true">ℹ</span>
-          <span className="notice-text">
-            <strong>Authoritative lunar mission profiles available:</strong> Select a mission below to view its specific priorities. Each profile includes scientifically defensible criteria weights and non-negotiable physical constraints based on NASA Artemis and lunar exploration studies.
-          </span>
         </div>
 
         <div className="mission-type-grid" role="radiogroup" aria-labelledby="heading-mission-type">
@@ -234,17 +257,9 @@ export function MissionSetup({
                 </div>
                 <p className="mission-type-card__desc">{type.description}</p>
                 {isSelected && (
-                  <button
-                    type="button"
-                    className="btn btn--secondary btn--small"
-                    style={{ marginTop: '0.6rem', alignSelf: 'flex-start' }}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleLoadDefaults(type.id)
-                    }}
-                  >
-                    Reset to {type.label} Defaults
-                  </button>
+                  <div style={{ marginTop: '0.4rem', fontSize: '0.75rem', color: 'var(--accent-teal)' }}>
+                    ✓ Active Profile Loaded
+                  </div>
                 )}
               </div>
             )
@@ -252,11 +267,127 @@ export function MissionSetup({
         </div>
       </section>
 
-      {/* SECTION B: Landing Region */}
+      {/* SECTION 2: Mission Schedule & Duration (Required) */}
+      <section className="form-section panel" aria-labelledby="heading-schedule">
+        <div className="panel-header">
+          <span className="panel-tag">REQUIRED INPUT 2 & 3</span>
+          <h2 id="heading-schedule" className="panel-title">2. Arrival Schedule & Surface Duration</h2>
+          <p className="panel-subtitle">
+            Specify the operational timeline for lunar landing and surface operations.
+          </p>
+        </div>
+
+        <div className="mission-schedule-grid">
+          {/* Planned Arrival Date */}
+          <div className="form-group">
+            <label htmlFor="arrival-date-input" className="form-label">
+              Expected Lunar Arrival Date <span className="required-mark">*</span>
+            </label>
+            <input
+              type="date"
+              id="arrival-date-input"
+              className="form-input font-mono"
+              min="2025-01-01"
+              max="2035-12-31"
+              value={currentArrival}
+              onChange={handleArrivalDateChange}
+              required
+            />
+            <p className="form-hint">
+              Target arrival calendar date for mission launch and transit planning.
+            </p>
+          </div>
+
+          {/* Arrival Window */}
+          <div className="form-group">
+            <label htmlFor="arrival-window-select" className="form-label">
+              Arrival Window Flexibility
+            </label>
+            <select
+              id="arrival-window-select"
+              className="form-select font-mono"
+              value={currentWindow}
+              onChange={handleArrivalWindowChange}
+            >
+              <option value="0">Exact Target Date (±0 days)</option>
+              <option value="6">Standard Orbital Window (±3 days)</option>
+              <option value="14">Extended Launch Period (±7 days)</option>
+              <option value="30">Seasonal Launch Window (±15 days)</option>
+            </select>
+            <p className="form-hint">
+              Accounts for launch vehicle slips and lunar orbital transfer windows.
+            </p>
+          </div>
+
+          {/* Surface Mission Duration */}
+          <div className="form-group">
+            <label htmlFor="duration-input" className="form-label">
+              Surface Mission Stay <span className="required-mark">*</span> <span className="unit-tag">(Earth days)</span>
+            </label>
+            <input
+              type="number"
+              id="duration-input"
+              className="form-input font-mono"
+              min="1"
+              max="730"
+              value={currentDuration}
+              onChange={(e) => handleDurationChange(Math.max(1, parseInt(e.target.value) || 1))}
+              required
+            />
+            <div className="duration-presets" role="group" aria-label="Quick duration presets">
+              <button
+                type="button"
+                className={`duration-chip ${currentDuration === 14 ? 'duration-chip--active' : ''}`}
+                onClick={() => handleDurationChange(14)}
+              >
+                14d (1 Lunar Day)
+              </button>
+              <button
+                type="button"
+                className={`duration-chip ${currentDuration === 30 ? 'duration-chip--active' : ''}`}
+                onClick={() => handleDurationChange(30)}
+              >
+                30d (1 Month)
+              </button>
+              <button
+                type="button"
+                className={`duration-chip ${currentDuration === 90 ? 'duration-chip--active' : ''}`}
+                onClick={() => handleDurationChange(90)}
+              >
+                90d (Quarter)
+              </button>
+              <button
+                type="button"
+                className={`duration-chip ${currentDuration === 180 ? 'duration-chip--active' : ''}`}
+                onClick={() => handleDurationChange(180)}
+              >
+                180d (Outpost)
+              </button>
+            </div>
+            <p className="form-hint">
+              Surface stay duration evaluates candidate site power and thermal viability.
+            </p>
+          </div>
+        </div>
+
+        {/* Scientific Modeling & Ephemeris Disclosure */}
+        <div className="notice-banner notice-banner--info" role="note" style={{ marginTop: '1.25rem' }}>
+          <span className="notice-icon" aria-hidden="true">🛰️</span>
+          <div className="notice-content">
+            <strong>Scientific Modeling & Ephemeris Limitation Disclosure</strong>
+            <p style={{ margin: '0.25rem 0 0.25rem 0', fontSize: '0.85rem', lineHeight: '1.45' }}>
+              • <strong>Duration Operational Gating</strong>: Missions exceeding 14 Earth days span past the lunar daytime window (~14.77 days) and require sustained high annual illumination to avoid cryogenic power failure during lunar darkness.<br />
+              • <strong>Dataset Boundary</strong>: Evaluated illumination and Earth visibility metrics are derived from NASA PGDA Product 69 (18.6-year multi-year precession cycle simulation). Instantaneous hour-by-hour calendar date shadow casting requires SPICE orbit kernels not bundled in the client.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION 3: Target Geographic Region */}
       <section className="form-section panel" aria-labelledby="heading-region">
         <div className="panel-header">
-          <span className="panel-tag">SECTION B</span>
-          <h2 id="heading-region" className="panel-title">2. Landing Region</h2>
+          <span className="panel-tag">REQUIRED INPUT 4</span>
+          <h2 id="heading-region" className="panel-title">3. Target Lunar Region</h2>
           <p className="panel-subtitle">
             Specify the lunar geographic target zone for candidate site evaluation.
           </p>
@@ -279,340 +410,12 @@ export function MissionSetup({
             ))}
           </select>
           <p className="form-hint">
-            <strong>Data coverage note:</strong> Current dataset coverage is strictly limited to candidate sites in the lunar south polar region (80°S – 90°S). Other regions will be unlocked as global datasets are integrated.
+            <strong>Data coverage note:</strong> Verified high-resolution dataset coverage is strictly active for candidate sites in the lunar south polar region (80°S – 90°S).
           </p>
         </div>
       </section>
 
-      {/* SECTION C: Mission Priorities */}
-      <section className="form-section panel" aria-labelledby="heading-priorities">
-        <div className="panel-header panel-header--with-action">
-          <div>
-            <span className="panel-tag">SECTION C</span>
-            <h2 id="heading-priorities" className="panel-title">3. Mission Priorities</h2>
-            <p className="panel-subtitle">
-              Adjust relative weights from 0 (ignored) to 10 (highest priority). Shares are normalized to sum to 100%.
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              className="btn btn--secondary btn--small"
-              onClick={() => handleLoadDefaults(formState.missionType)}
-              title={`Reset weights and constraints to default ${typeOpt?.label} preset`}
-            >
-              Reset to {typeOpt?.label} Defaults
-            </button>
-            <button
-              type="button"
-              className="btn btn--subtle btn--small"
-              onClick={handleResetToEqual}
-              aria-label="Reset all weights to equal value of 5"
-            >
-              Reset to equal (5/10)
-            </button>
-          </div>
-        </div>
-
-        {currentRationale && (
-          <div
-            className="notice-banner notice-banner--info"
-            role="region"
-            aria-label="Mission Weight Rationale"
-            style={{ marginBottom: '1.25rem' }}
-          >
-            <span className="notice-icon" aria-hidden="true">💡</span>
-            <div className="notice-content">
-              <strong>{currentRationale.title} — Documented Default Assumptions</strong>
-              <p style={{ margin: '0.25rem 0 0.25rem 0', fontSize: '0.875rem', lineHeight: '1.4' }}>
-                {currentRationale.rationale}
-              </p>
-              <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
-                <em>Reference weights: {currentRationale.weightsSummary} (All weights remain fully editable)</em>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {weightsError && (
-          <div className="notice-banner notice-banner--error" role="alert">
-            <span className="notice-icon" aria-hidden="true">⚠️</span>
-            <span className="notice-text">
-              <strong>Priority validation error:</strong> {weightsError}
-            </span>
-          </div>
-        )}
-
-        <div className="sliders-list">
-          {CRITERION_IDS.map((cid) => {
-            const rawVal = formState.rawWeights[cid] ?? 0
-            const share = normalizedShares ? normalizedShares[cid] : 0
-            const sharePercent = normalizedShares ? formatWeightShare(share) : '0.0%'
-            const direction = CRITERION_DIRECTION[cid]
-            const dirLabel = direction === 'cost' ? 'Lower is better (cost)' : 'Higher is better (benefit)'
-            const sliderId = `slider-${cid}`
-
-            return (
-              <div key={cid} className="slider-row">
-                <div className="slider-row__header">
-                  <div className="slider-row__label-group">
-                    <label htmlFor={sliderId} className="slider-row__label">
-                      {CRITERION_LABELS[cid]}
-                    </label>
-                    <span className={`direction-badge direction-badge--${direction}`}>
-                      {dirLabel}
-                    </span>
-                  </div>
-                  <div className="slider-row__metrics">
-                    <span className="metric-raw" title="Raw slider setting">
-                      Setting: <strong>{rawVal}</strong> / 10
-                    </span>
-                    <span className="metric-share" title="Normalized share of decision weight">
-                      Share: <strong>{sharePercent}</strong>
-                    </span>
-                  </div>
-                </div>
-
-                <div className="slider-row__controls">
-                  <input
-                    type="range"
-                    id={sliderId}
-                    min="0"
-                    max="10"
-                    step="1"
-                    value={rawVal}
-                    onChange={(e) => handleWeightChange(cid, Number(e.target.value))}
-                    className="range-slider"
-                    aria-describedby={`desc-${cid}`}
-                  />
-                  <div className="share-bar" aria-hidden="true">
-                    <div
-                      className="share-bar__fill"
-                      style={{ width: `${Math.min(100, share * 100)}%` }}
-                    />
-                  </div>
-                </div>
-
-                <p id={`desc-${cid}`} className="slider-row__description">
-                  {CRITERION_DESCRIPTIONS[cid]} ({CRITERION_UNITS[cid]})
-                </p>
-              </div>
-            )
-          })}
-        </div>
-      </section>
-
-      {/* SECTION D: Mission Constraints */}
-      <section className="form-section panel" aria-labelledby="heading-constraints">
-        <div className="panel-header panel-header--with-action">
-          <div>
-            <span className="panel-tag">SECTION D</span>
-            <h2 id="heading-constraints" className="panel-title">4. Mission Constraints</h2>
-            <p className="panel-subtitle">
-              Define operational threshold boundaries. Sites failing essential limits are filtered out before ranking.
-            </p>
-          </div>
-          <button
-            type="button"
-            className="btn btn--secondary"
-            onClick={handleAddConstraint}
-          >
-            + Add constraint
-          </button>
-        </div>
-
-        {formState.constraints.length === 0 ? (
-          <div className="empty-constraints-notice" role="status">
-            <span className="notice-icon" aria-hidden="true">🛡️</span>
-            <div>
-              <p className="empty-constraints-text">
-                No constraints added. Without constraints, no site is excluded on requirements.
-              </p>
-              <button
-                type="button"
-                className="btn btn--secondary btn--small"
-                style={{ marginTop: '0.75rem' }}
-                onClick={() =>
-                  onFormChange({
-                    ...formState,
-                    constraints: getDefaultConstraintsForMission(formState.missionType),
-                  })
-                }
-              >
-                + Load Recommended {typeOpt?.label} Constraints
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="constraints-list">
-            {formState.constraints.map((c, index) => {
-              const unit = CRITERION_UNITS[c.criterion]
-              const passVal = c.passLimit.trim()
-              const marginalVal = c.marginalLimit.trim()
-
-              // Generate live rule explanation
-              let liveExplanation = ''
-              if (c.direction === 'max') {
-                liveExplanation = `Rule: Pass if value ≤ ${passVal || '[pass]'}; Marginal if value ≤ ${marginalVal || '[marginal]'}; Fail if value > ${marginalVal || '[marginal]'}.`
-              } else {
-                liveExplanation = `Rule: Pass if value ≥ ${passVal || '[pass]'}; Marginal if value ≥ ${marginalVal || '[marginal]'}; Fail if value < ${marginalVal || '[marginal]'}.`
-              }
-              const essentialNote = c.essential
-                ? 'Essential constraint: Failing this threshold disqualifies the candidate site from ranking.'
-                : 'Non-essential constraint: Failure will be noted in trade-off reports but does not disqualify the site.'
-
-              return (
-                <article key={c.id} className="constraint-card" aria-label={`Constraint ${index + 1}`}>
-                  <div className="constraint-card__header">
-                    <div className="constraint-card__title-group">
-                      <span className="constraint-card__badge">CONSTRAINT #{index + 1}</span>
-                      <span className="constraint-card__criterion-name">
-                        {CRITERION_LABELS[c.criterion]}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      className="btn-remove"
-                      onClick={() => handleRemoveConstraint(c.id)}
-                      aria-label={`Remove constraint ${index + 1} for ${CRITERION_LABELS[c.criterion]}`}
-                    >
-                      Remove
-                    </button>
-                  </div>
-
-                  <div className="constraint-grid">
-                    {/* Criterion selection */}
-                    <div className="form-group">
-                      <label htmlFor={`crit-select-${c.id}`} className="form-label">
-                        Evaluation Criterion
-                      </label>
-                      <select
-                        id={`crit-select-${c.id}`}
-                        className="form-select"
-                        value={c.criterion}
-                        onChange={(e) =>
-                          handleUpdateConstraint(c.id, {
-                            criterion: e.target.value as CriterionId,
-                          })
-                        }
-                      >
-                        {CRITERION_IDS.map((cid) => (
-                          <option key={cid} value={cid}>
-                            {CRITERION_LABELS[cid]} ({CRITERION_UNITS[cid]})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Direction */}
-                    <div className="form-group">
-                      <label htmlFor={`dir-select-${c.id}`} className="form-label">
-                        Limit Direction
-                      </label>
-                      <select
-                        id={`dir-select-${c.id}`}
-                        className="form-select"
-                        value={c.direction}
-                        onChange={(e) =>
-                          handleUpdateConstraint(c.id, {
-                            direction: e.target.value as ConstraintDirection,
-                          })
-                        }
-                      >
-                        <option value="max">Max (upper bound — value must stay at or below)</option>
-                        <option value="min">Min (lower bound — value must stay at or above)</option>
-                      </select>
-                    </div>
-
-                    {/* Pass Limit */}
-                    <div className="form-group">
-                      <label htmlFor={`pass-input-${c.id}`} className="form-label">
-                        Pass Limit <span className="unit-tag">({unit})</span>
-                      </label>
-                      <input
-                        type="number"
-                        id={`pass-input-${c.id}`}
-                        step="any"
-                        className="form-input"
-                        placeholder="e.g. 10"
-                        value={c.passLimit}
-                        onChange={(e) =>
-                          handleUpdateConstraint(c.id, { passLimit: e.target.value })
-                        }
-                      />
-                    </div>
-
-                    {/* Marginal Limit */}
-                    <div className="form-group">
-                      <label htmlFor={`marg-input-${c.id}`} className="form-label">
-                        Marginal Limit <span className="unit-tag">({unit})</span>
-                      </label>
-                      <input
-                        type="number"
-                        id={`marg-input-${c.id}`}
-                        step="any"
-                        className="form-input"
-                        placeholder="e.g. 15"
-                        value={c.marginalLimit}
-                        onChange={(e) =>
-                          handleUpdateConstraint(c.id, { marginalLimit: e.target.value })
-                        }
-                      />
-                    </div>
-                  </div>
-
-                  {/* Essential Checkbox */}
-                  <div className="form-checkbox-row">
-                    <label className="checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={c.essential}
-                        onChange={(e) =>
-                          handleUpdateConstraint(c.id, { essential: e.target.checked })
-                        }
-                        className="checkbox-control"
-                      />
-                      <span>
-                        <strong>Essential constraint:</strong> Failing this limit disqualifies the candidate site immediately.
-                      </span>
-                    </label>
-                  </div>
-
-                  {/* Rationale Textarea */}
-                  <div className="form-group">
-                    <label htmlFor={`rationale-${c.id}`} className="form-label">
-                      Why this limit? (your reason) <span className="required-mark">*</span>
-                    </label>
-                    <textarea
-                      id={`rationale-${c.id}`}
-                      className="form-textarea"
-                      rows={2}
-                      placeholder="Document the engineering or operational rationale for this threshold (required)..."
-                      value={c.rationale}
-                      onChange={(e) =>
-                        handleUpdateConstraint(c.id, { rationale: e.target.value })
-                      }
-                    />
-                  </div>
-
-                  {/* Live Explanation */}
-                  <div className="constraint-explanation" aria-live="polite">
-                    <div className="explanation-line">
-                      <span className="explanation-icon" aria-hidden="true">📐</span>
-                      <span>{liveExplanation}</span>
-                    </div>
-                    <div className="explanation-line explanation-line--sub">
-                      <span>{essentialNote}</span>
-                    </div>
-                  </div>
-                </article>
-              )
-            })}
-          </div>
-        )}
-      </section>
-
-      {/* SECTION E: Error Box & Action Buttons */}
+      {/* SECTION 4: Error Box & Primary Action Buttons */}
       <section className="form-actions-panel panel" aria-label="Form Submission">
         {errors.length > 0 && (
           <div
@@ -651,10 +454,320 @@ export function MissionSetup({
             className="btn btn--secondary"
             onClick={handleResetAll}
           >
-            Reset all
+            Reset to Defaults
           </button>
         </div>
       </section>
+
+      {/* OPTIONAL ADVANCED SETTINGS (Collapsed Accordion) */}
+      <details className="advanced-accordion">
+        <summary>
+          <span>⚙️ Advanced Engineering Settings & Criteria Overrides (Optional)</span>
+          <span className="advanced-accordion__badge">Weights & Constraints</span>
+        </summary>
+        <div className="advanced-accordion-content">
+          <div className="notice-banner notice-banner--info" role="note">
+            <span className="notice-icon" aria-hidden="true">💡</span>
+            <div className="notice-content">
+              <strong>Technical Overrides Note</strong>
+              <p style={{ margin: '0.2rem 0', fontSize: '0.825rem' }}>
+                Weights and safety limits are pre-configured based on NASA Artemis and lunar surface studies. Manual modification is optional for sensitivity analysis.
+              </p>
+            </div>
+          </div>
+
+          {/* Advanced Priorities / Weights */}
+          <div className="panel" style={{ background: 'transparent', border: 'none', padding: 0 }}>
+            <div className="panel-header panel-header--with-action">
+              <div>
+                <h3 className="panel-title" style={{ fontSize: '1rem' }}>Criteria Weights & Importance</h3>
+                <p className="panel-subtitle">
+                  Adjust relative weights from 0 (ignored) to 10 (highest priority). Shares normalize to 100%.
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="btn btn--secondary btn--small"
+                  onClick={() => handleLoadDefaults(formState.missionType)}
+                >
+                  Reset to {typeOpt?.label} Defaults
+                </button>
+                <button
+                  type="button"
+                  className="btn btn--subtle btn--small"
+                  onClick={handleResetToEqual}
+                >
+                  Reset to Equal (5/10)
+                </button>
+              </div>
+            </div>
+
+            {currentRationale && (
+              <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                <strong>Documented default:</strong> {currentRationale.rationale}
+              </p>
+            )}
+
+            {weightsError && (
+              <div className="notice-banner notice-banner--error" role="alert">
+                <span className="notice-icon" aria-hidden="true">⚠️</span>
+                <span className="notice-text">
+                  <strong>Priority validation error:</strong> {weightsError}
+                </span>
+              </div>
+            )}
+
+            <div className="sliders-list">
+              {CRITERION_IDS.map((cid) => {
+                const rawVal = formState.rawWeights[cid] ?? 0
+                const share = normalizedShares ? normalizedShares[cid] : 0
+                const sharePercent = normalizedShares ? formatWeightShare(share) : '0.0%'
+                const direction = CRITERION_DIRECTION[cid]
+                const dirLabel = direction === 'cost' ? 'Lower is better (cost)' : 'Higher is better (benefit)'
+                const sliderId = `slider-${cid}`
+
+                return (
+                  <div key={cid} className="slider-row">
+                    <div className="slider-row__header">
+                      <div className="slider-row__label-group">
+                        <label htmlFor={sliderId} className="slider-row__label">
+                          {CRITERION_LABELS[cid]}
+                        </label>
+                        <span className={`direction-badge direction-badge--${direction}`}>
+                          {dirLabel}
+                        </span>
+                      </div>
+                      <div className="slider-row__metrics">
+                        <span className="metric-raw">
+                          Setting: <strong>{rawVal}</strong> / 10
+                        </span>
+                        <span className="metric-share">
+                          Share: <strong>{sharePercent}</strong>
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="slider-row__controls">
+                      <input
+                        type="range"
+                        id={sliderId}
+                        min="0"
+                        max="10"
+                        step="1"
+                        value={rawVal}
+                        onChange={(e) => handleWeightChange(cid, Number(e.target.value))}
+                        className="range-slider"
+                      />
+                      <div className="share-bar" aria-hidden="true">
+                        <div
+                          className="share-bar__fill"
+                          style={{ width: `${Math.min(100, share * 100)}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <p className="slider-row__description">
+                      {CRITERION_DESCRIPTIONS[cid]} ({CRITERION_UNITS[cid]})
+                    </p>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Advanced Constraints */}
+          <div className="panel" style={{ background: 'transparent', border: 'none', padding: 0 }}>
+            <div className="panel-header panel-header--with-action">
+              <div>
+                <h3 className="panel-title" style={{ fontSize: '1rem' }}>Physical Constraint Thresholds</h3>
+                <p className="panel-subtitle">
+                  Define engineering limits. Sites failing essential limits are filtered out before TOPSIS ranking.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn btn--secondary btn--small"
+                onClick={handleAddConstraint}
+              >
+                + Add constraint
+              </button>
+            </div>
+
+            {formState.constraints.length === 0 ? (
+              <div className="empty-constraints-notice" role="status">
+                <span className="notice-icon" aria-hidden="true">🛡️</span>
+                <div>
+                  <p className="empty-constraints-text">
+                    No constraints active. All sites will be ranked without feasibility filtering.
+                  </p>
+                  <button
+                    type="button"
+                    className="btn btn--secondary btn--small"
+                    style={{ marginTop: '0.5rem' }}
+                    onClick={() =>
+                      onFormChange({
+                        ...formState,
+                        constraints: getDefaultConstraintsForMission(formState.missionType),
+                      })
+                    }
+                  >
+                    + Load Recommended {typeOpt?.label} Constraints
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="constraints-list">
+                {formState.constraints.map((c, index) => {
+                  const unit = CRITERION_UNITS[c.criterion]
+                  const passVal = c.passLimit.trim()
+                  const margVal = c.marginalLimit.trim()
+                  const isMax = c.direction === 'max'
+
+                  let liveExplanation = ''
+                  if (passVal !== '' && margVal !== '') {
+                    if (isMax) {
+                      liveExplanation = `≤ ${passVal} ${unit} is PASS; ${passVal}–${margVal} ${unit} is MARGINAL; > ${margVal} ${unit} is FAIL.`
+                    } else {
+                      liveExplanation = `≥ ${passVal} ${unit} is PASS; ${margVal}–${passVal} ${unit} is MARGINAL; < ${margVal} ${unit} is FAIL.`
+                    }
+                  } else {
+                    liveExplanation = 'Enter both limits to see evaluation thresholds.'
+                  }
+
+                  return (
+                    <article key={c.id} className="constraint-card">
+                      <div className="constraint-card__header">
+                        <span className="constraint-card__index">Constraint #{index + 1}</span>
+                        <button
+                          type="button"
+                          className="btn btn--danger btn--small"
+                          onClick={() => handleRemoveConstraint(c.id)}
+                          aria-label={`Remove constraint #${index + 1}`}
+                        >
+                          ✕ Remove
+                        </button>
+                      </div>
+
+                      <div className="constraint-grid">
+                        <div className="form-group">
+                          <label htmlFor={`crit-${c.id}`} className="form-label">
+                            Criterion
+                          </label>
+                          <select
+                            id={`crit-${c.id}`}
+                            className="form-select"
+                            value={c.criterion}
+                            onChange={(e) =>
+                              handleUpdateConstraint(c.id, {
+                                criterion: e.target.value as CriterionId,
+                              })
+                            }
+                          >
+                            {CRITERION_IDS.map((cid) => (
+                              <option key={cid} value={cid}>
+                                {CRITERION_LABELS[cid]} ({CRITERION_UNITS[cid]})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="form-group">
+                          <label htmlFor={`dir-${c.id}`} className="form-label">
+                            Direction
+                          </label>
+                          <select
+                            id={`dir-${c.id}`}
+                            className="form-select"
+                            value={c.direction}
+                            onChange={(e) =>
+                              handleUpdateConstraint(c.id, {
+                                direction: e.target.value as 'max' | 'min',
+                              })
+                            }
+                          >
+                            <option value="max">Maximum limit (upper bound)</option>
+                            <option value="min">Minimum limit (lower bound)</option>
+                          </select>
+                        </div>
+
+                        <div className="form-group">
+                          <label htmlFor={`pass-${c.id}`} className="form-label">
+                            Pass limit <span className="unit-tag">({unit})</span>
+                          </label>
+                          <input
+                            type="number"
+                            id={`pass-${c.id}`}
+                            className="form-input font-mono"
+                            step="any"
+                            value={c.passLimit}
+                            onChange={(e) =>
+                              handleUpdateConstraint(c.id, { passLimit: e.target.value })
+                            }
+                          />
+                        </div>
+
+                        <div className="form-group">
+                          <label htmlFor={`marg-${c.id}`} className="form-label">
+                            Marginal limit <span className="unit-tag">({unit})</span>
+                          </label>
+                          <input
+                            type="number"
+                            id={`marg-${c.id}`}
+                            className="form-input font-mono"
+                            step="any"
+                            value={c.marginalLimit}
+                            onChange={(e) =>
+                              handleUpdateConstraint(c.id, { marginalLimit: e.target.value })
+                            }
+                          />
+                        </div>
+                      </div>
+
+                      <div className="form-checkbox-row">
+                        <label className="checkbox-label">
+                          <input
+                            type="checkbox"
+                            checked={c.essential}
+                            onChange={(e) =>
+                              handleUpdateConstraint(c.id, { essential: e.target.checked })
+                            }
+                            className="checkbox-control"
+                          />
+                          <span>
+                            <strong>Essential constraint:</strong> Candidate sites exceeding marginal limit are eliminated.
+                          </span>
+                        </label>
+                      </div>
+
+                      <div className="form-group">
+                        <label htmlFor={`rationale-${c.id}`} className="form-label">
+                          Operational Rationale
+                        </label>
+                        <input
+                          type="text"
+                          id={`rationale-${c.id}`}
+                          className="form-input"
+                          value={c.rationale}
+                          onChange={(e) =>
+                            handleUpdateConstraint(c.id, { rationale: e.target.value })
+                          }
+                          placeholder="Document why this threshold is set..."
+                        />
+                      </div>
+
+                      <div className="constraint-explanation">
+                        <span className="explanation-icon" aria-hidden="true">📐</span>
+                        <span>{liveExplanation}</span>
+                      </div>
+                    </article>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </details>
     </div>
   )
 }

@@ -16,8 +16,18 @@ export interface FormConstraint {
 export interface MissionFormState {
   missionType: MissionTypeId
   region: RegionId
+  arrivalDate?: string
+  arrivalWindowDays?: number
+  durationDays?: number
   rawWeights: Record<CriterionId, number>
   constraints: FormConstraint[]
+}
+
+export const DEFAULT_MISSION_DURATIONS: Record<MissionTypeId, number> = {
+  science: 14,
+  resource: 30,
+  crewed: 30,
+  communication: 180,
 }
 
 export const MISSION_WEIGHT_RATIONALE: Record<
@@ -249,10 +259,17 @@ export function getDefaultConstraintsForMission(typeId: MissionTypeId): FormCons
  * Returns a complete form state initialized with the default preset values
  * for a specific mission profile.
  */
-export function getMissionPresetState(typeId: MissionTypeId): MissionFormState {
+export function getMissionPresetState(
+  typeId: MissionTypeId,
+  overrides?: Partial<MissionFormState>
+): MissionFormState {
+  const duration = overrides?.durationDays ?? DEFAULT_MISSION_DURATIONS[typeId] ?? 14
   return {
     missionType: typeId,
     region: 'south-pole',
+    arrivalDate: overrides?.arrivalDate ?? '2027-06-01',
+    arrivalWindowDays: overrides?.arrivalWindowDays ?? 7,
+    durationDays: duration,
     rawWeights: getDefaultRawWeightsForMission(typeId),
     constraints: getDefaultConstraintsForMission(typeId),
   }
@@ -267,6 +284,9 @@ export function defaultFormState(): MissionFormState {
   return {
     missionType: 'science',
     region: 'south-pole',
+    arrivalDate: '2027-06-01',
+    arrivalWindowDays: 7,
+    durationDays: 14,
     rawWeights: {
       slope: 5,
       roughness: 5,
@@ -437,6 +457,43 @@ export function buildMissionProfile(form: MissionFormState): BuildMissionResult 
     })
   }
 
+  // Validate Arrival Date if provided
+  const arrivalDate = form.arrivalDate?.trim()
+  if (arrivalDate !== undefined) {
+    if (!arrivalDate) {
+      errors.push('Expected lunar arrival date is required.')
+    } else {
+      const parsedDate = new Date(arrivalDate)
+      if (isNaN(parsedDate.getTime())) {
+        errors.push('Expected lunar arrival date must be a valid calendar date (YYYY-MM-DD).')
+      }
+    }
+  }
+
+  // Validate Duration if provided
+  if (form.durationDays !== undefined) {
+    if (
+      typeof form.durationDays !== 'number' ||
+      !Number.isFinite(form.durationDays) ||
+      form.durationDays < 1 ||
+      form.durationDays > 730
+    ) {
+      errors.push('Surface mission duration must be a positive number between 1 and 730 Earth days.')
+    }
+  }
+
+  // Validate Arrival Window if provided
+  if (form.arrivalWindowDays !== undefined) {
+    if (
+      typeof form.arrivalWindowDays !== 'number' ||
+      !Number.isFinite(form.arrivalWindowDays) ||
+      form.arrivalWindowDays < 0 ||
+      form.arrivalWindowDays > 60
+    ) {
+      errors.push('Arrival window must be between 0 and 60 days.')
+    }
+  }
+
   if (errors.length > 0) {
     return { ok: false, profile: null, errors }
   }
@@ -448,10 +505,15 @@ export function buildMissionProfile(form: MissionFormState): BuildMissionResult 
   const regionOpt = REGION_OPTIONS.find((r) => r.id === form.region)
   const regionLabel = regionOpt?.label ?? 'Lunar South Pole'
 
+  const dateStr = arrivalDate ? arrivalDate : '2027-06-01'
+  const windowDays = typeof form.arrivalWindowDays === 'number' ? form.arrivalWindowDays : 7
+  const windowStr = windowDays > 0 ? ` (±${Math.round(windowDays / 2)}d window)` : ' (exact date)'
+  const durationStr = typeof form.durationDays === 'number' ? `${form.durationDays} Earth days` : '14 Earth days'
+
   const profile: MissionProfile = {
     id: `mission-${form.missionType}`,
     name: `${typeLabel} Profile`,
-    description: `User-configured ${typeLabel.toLowerCase()} profile targeting ${regionLabel}.`,
+    description: `User-configured ${typeLabel.toLowerCase()} profile targeting ${regionLabel}. Planned arrival: ${dateStr}${windowStr}, stay duration: ${durationStr}. (Illumination & Earth visibility evaluated via NASA PGDA 18.6-yr multi-year validated model).`,
     weights: normalizedWeights,
     constraints: parsedConstraints,
   }
