@@ -2,6 +2,8 @@ import { supabase, isSupabaseConfigured } from './supabaseClient'
 import { Database } from '../types/database.types'
 
 export type SourceRecord = Database['public']['Tables']['sources']['Row']
+export type DataSourceRow = Database['public']['Tables']['data_sources']['Row']
+export type DatasetVersionRow = Database['public']['Tables']['dataset_versions']['Row']
 
 // Static fallback sources metadata matching NASA catalog
 export const FALLBACK_SOURCES: SourceRecord[] = [
@@ -75,24 +77,74 @@ export const FALLBACK_SOURCES: SourceRecord[] = [
 
 /**
  * Fetches dataset sources from Supabase with fallback.
+ * Checks:
+ * 1. Normalized 10-table schema (data_sources + dataset_versions)
+ * 2. Legacy schema (sources)
+ * 3. Local fallback metadata (FALLBACK_SOURCES)
  */
 export async function fetchSources(): Promise<{ sources: SourceRecord[]; source: 'supabase' | 'local' }> {
   if (!isSupabaseConfigured() || !supabase) {
     return { sources: FALLBACK_SOURCES, source: 'local' }
   }
 
+  // 1. Try fetching from 10-table data_sources and dataset_versions
+  try {
+    const { data: sourcesData, error: sourcesError } = await supabase
+      .from('data_sources')
+      .select('*')
+      .order('id', { ascending: true })
+
+    if (!sourcesError && sourcesData && sourcesData.length > 0) {
+      // Query dataset_versions
+      let versionsBySource = new Map<string, DatasetVersionRow>()
+      try {
+        const { data: versionsData } = await supabase
+          .from('dataset_versions')
+          .select('*')
+
+        if (versionsData && versionsData.length > 0) {
+          for (const v of versionsData) {
+            versionsBySource.set(v.source_id, v)
+          }
+        }
+      } catch {
+        // Continue without versions if table not queried
+      }
+
+      const mapped: SourceRecord[] = sourcesData.map((s) => {
+        const v = versionsBySource.get(s.id)
+        return {
+          id: s.id,
+          name: s.name,
+          organization: s.organization,
+          url: s.url,
+          version: v?.version_name ?? null,
+          retrieval_date: v?.retrieval_date ?? null,
+          processing_method: v?.processing_method ?? null,
+          description: s.description,
+          created_at: s.created_at,
+        }
+      })
+
+      return { sources: mapped, source: 'supabase' }
+    }
+  } catch {
+    // Proceed to legacy sources check
+  }
+
+  // 2. Try fetching from legacy sources table
   try {
     const { data, error } = await supabase
       .from('sources')
       .select('*')
       .order('id', { ascending: true })
 
-    if (error || !data || data.length === 0) {
-      return { sources: FALLBACK_SOURCES, source: 'local' }
+    if (!error && data && data.length > 0) {
+      return { sources: data, source: 'supabase' }
     }
-
-    return { sources: data, source: 'supabase' }
   } catch {
-    return { sources: FALLBACK_SOURCES, source: 'local' }
+    // Fall back to local catalog
   }
+
+  return { sources: FALLBACK_SOURCES, source: 'local' }
 }

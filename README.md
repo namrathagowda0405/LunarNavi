@@ -30,7 +30,7 @@ LunarNavi is an advanced decision-support application built for NASA Artemis and
 - **Cartography**: HTML5 Canvas 2D with dynamic false-color shaders (Viridis, Inferno, Coolwarm)
 - **Scientific Engine**: Pure TypeScript client-side MCDA engine (zero network latency, air-gap compatible)
 - **Backend / Database**: Supabase (PostgreSQL 15), Row Level Security (RLS), `@supabase/supabase-js` v2
-- **Testing**: Vitest (16 test suites, 169 unit & end-to-end integration tests)
+- **Testing**: Vitest (17 test suites, 182 unit & end-to-end integration tests)
 
 ---
 
@@ -91,7 +91,7 @@ LunarNavi runs **100% out-of-the-box in offline mode** using compiled NASA datas
    VITE_SUPABASE_URL=https://your-project-ref.supabase.co
    VITE_SUPABASE_ANON_KEY=your-anon-public-key
    ```
-3. Run migrations and seeds found in [`supabase/migrations/`](file:///supabase/migrations/) and [`supabase/seed.sql`](file:///supabase/seed.sql).
+3. Run migrations and seeds found in [`supabase/`](file:///supabase/): [`supabase/seed_10_tables.sql`](file:///supabase/seed_10_tables.sql) and [`supabase/rls_10_tables.sql`](file:///supabase/rls_10_tables.sql).
 4. See [`docs/supabase-setup.md`](file:///docs/supabase-setup.md) for full instructions.
 
 ---

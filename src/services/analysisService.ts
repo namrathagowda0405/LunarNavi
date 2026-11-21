@@ -17,6 +17,7 @@ export interface AnalysisRunRecord {
     closeness: number
     distanceToIdeal: number
     distanceToAntiIdeal: number
+    isFeasible?: boolean
   }>
   simulationParameters?: {
     iterations: number
@@ -28,6 +29,7 @@ export interface AnalysisRunRecord {
     topSiteWinRate: number
     topSiteTop3Rate: number
     nominalRank: number | null
+    rankDistribution?: Record<number, number>
   }
   notes?: string
 }
@@ -48,7 +50,11 @@ export interface StoredAnalysisRun {
 const localSessionHistory: StoredAnalysisRun[] = []
 
 /**
- * Persists an analysis run (TOPSIS results + Monte Carlo summary) to Supabase.
+ * Persists an analysis run to Supabase.
+ * Writes to:
+ * 1. `analysis_runs` (core run metadata and parameters)
+ * 2. `analysis_results` (individual site TOPSIS rankings, closeness, and distances)
+ * 3. `simulation_runs` (Monte Carlo sensitivity summary and win rates)
  */
 export async function saveAnalysisRun(
   record: AnalysisRunRecord
@@ -75,6 +81,7 @@ export async function saveAnalysisRun(
   }
 
   try {
+    // 1. Insert into analysis_runs
     const insertPayload: Database['public']['Tables']['analysis_runs']['Insert'] = {
       mission_id: record.missionId ?? null,
       mission_type: record.missionType,
@@ -91,18 +98,64 @@ export async function saveAnalysisRun(
       notes: record.notes ?? null,
     }
 
-    const { data, error } = await supabase
+    const { data: runData, error: runError } = await supabase
       .from('analysis_runs')
       .insert(insertPayload)
       .select('id')
       .single()
 
-    if (error) {
-      console.warn('Could not save analysis run to Supabase:', error.message)
-      return { success: true, id: localId, error: error.message }
+    if (runError) {
+      console.warn('Could not save analysis run to Supabase analysis_runs:', runError.message)
+      return { success: true, id: localId, error: runError.message }
     }
 
-    return { success: true, id: data.id }
+    const savedRunId = runData.id
+
+    // 2. Insert site rankings into analysis_results if available
+    if (record.rankings && record.rankings.length > 0) {
+      try {
+        const resultsPayload: Database['public']['Tables']['analysis_results']['Insert'][] = record.rankings.map(
+          (r) => ({
+            run_id: savedRunId,
+            site_id: r.id,
+            rank: r.rank,
+            closeness: r.closeness,
+            distance_to_ideal: r.distanceToIdeal,
+            distance_to_anti_ideal: r.distanceToAntiIdeal,
+            is_feasible: r.isFeasible ?? true,
+          })
+        )
+
+        await supabase.from('analysis_results').insert(resultsPayload)
+      } catch (resultsErr) {
+        // Log but do not fail the overall run save
+        console.warn('Could not insert into analysis_results:', resultsErr)
+      }
+    }
+
+    // 3. Insert Monte Carlo summary into simulation_runs if available
+    if (record.monteCarloSummary) {
+      try {
+        const simPayload: Database['public']['Tables']['simulation_runs']['Insert'] = {
+          run_id: savedRunId,
+          iterations: record.simulationParameters?.iterations ?? 1000,
+          weight_spread: record.simulationParameters?.weightRelativeSpread ?? 0.2,
+          seed: record.simulationParameters?.seed ?? 42,
+          top_site_id: record.monteCarloSummary.topSiteId,
+          top_site_win_rate: record.monteCarloSummary.topSiteWinRate,
+          top_site_top3_rate: record.monteCarloSummary.topSiteTop3Rate,
+          nominal_rank: record.monteCarloSummary.nominalRank,
+          rank_distribution: (record.monteCarloSummary.rankDistribution as unknown) as Json,
+        }
+
+        await supabase.from('simulation_runs').insert(simPayload)
+      } catch (simErr) {
+        // Log but do not fail the overall run save
+        console.warn('Could not insert into simulation_runs:', simErr)
+      }
+    }
+
+    return { success: true, id: savedRunId }
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
     return { success: true, id: localId, error: msg }

@@ -39,13 +39,19 @@ This guide walks you through provisioning, configuring, and verifying the **Supa
 6. Confirm that the query succeeds with the message `"Success. No rows returned"`.
 
 This creates:
-- `sources` table
-- `criteria_definitions` table
-- `missions` table
+- `data_sources` table
+- `dataset_versions` table
 - `lunar_sites` table
+- `site_measurements` table
+- `mission_profiles` table
+- `criteria` table
+- `mission_criteria_weights` table
 - `analysis_runs` table
-- Performance indexes
-- Row Level Security (RLS) policies
+- `analysis_results` table
+- `simulation_runs` table
+- Performance indexes & compatibility mapping
+
+To apply idempotent RLS policies across all 10 tables, run [`supabase/rls_10_tables.sql`](file:///supabase/rls_10_tables.sql).
 
 ---
 
@@ -53,16 +59,18 @@ This creates:
 
 1. In the Supabase **SQL Editor**, open another new query tab.
 2. Open the seed file from your local repository:
-   [`supabase/seed.sql`](file:///supabase/seed.sql)
-3. Paste the entire seed script into the editor.
+   [`supabase/seed_10_tables.sql`](file:///supabase/seed_10_tables.sql) (or [`supabase/seed.sql`](file:///supabase/seed.sql))
+3. Paste the SQL script into the editor.
 4. Click **"Run"**.
 5. Confirm that the query executes successfully.
 
 This populates:
-- **6 Authoritative NASA Scientific Sources** (LOLA GDR, PGDA 90, PGDA 69, Artemis SDR, Diviner, LEND).
-- **6 Standard Evaluation Criteria Definitions** (Slope, Roughness, Illumination, Resource Proxy, Earth Communication, Scientific Value).
-- **4 Official Artemis Mission Profiles** (Science, Resource Exploration, Crewed Base, Communication).
-- **16 Curated Lunar South Pole Candidate Sites** with authentic coordinates, elevations, and measurements.
+- **6 Authoritative NASA Scientific Sources** (`data_sources`).
+- **6 Standard Evaluation Criteria Definitions** (`criteria`).
+- **4 Official Artemis Mission Profiles** (`mission_profiles`).
+- **Predefined Criteria Weights** (`mission_criteria_weights`).
+- **16 Curated Lunar South Pole Candidate Sites** (`lunar_sites`) + calibration sites.
+- **Detailed Criterion Measurements with Uncertainty Bounds** (`site_measurements`).
 
 ---
 

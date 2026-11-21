@@ -219,7 +219,7 @@ export function Results({
               className="btn btn--secondary btn--small"
               onClick={onEditMission}
             >
-              Adjust Priorities in Setup
+              Change Purpose in Setup
             </button>
             {onNavigate && (
               <button
@@ -276,7 +276,7 @@ export function Results({
             </div>
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-            Changing weights in Mission Setup dynamically recalculates ideal vector proximity and rankings.
+            Selecting different mission purposes dynamically recalculates ideal vector proximity and rankings.
           </div>
         </div>
       </section>

@@ -240,4 +240,30 @@ describe('Mission Data Pipeline & Candidate Site Integration', () => {
       expect(commsTopsis.ranking[0].id).toBe('artemis-malapert-massif')
     })
   })
+
+  describe('6. Scientific Pipeline Validation & Traceability Report', () => {
+    it('verifies that automated pipeline validation report exists and has 0 validation errors', async () => {
+      const fs = await import('fs')
+      const path = await import('path')
+      const { fileURLToPath } = await import('url')
+
+      const currentDir = path.dirname(fileURLToPath(import.meta.url))
+      const reportFile = path.join(currentDir, '../data/processed/pipeline_validation_report.json')
+
+      expect(fs.existsSync(reportFile)).toBe(true)
+      const report = JSON.parse(fs.readFileSync(reportFile, 'utf-8'))
+
+      expect(report.overallStatus).toBe('VERIFIED')
+      expect(report.candidateSitesAudit.summary.validation_errors).toEqual([])
+      expect(report.candidateSitesAudit.summary.total_sites).toBe(16)
+      expect(report.candidateSitesAudit.summary.missing_measurements_disclosed).toBe(2)
+
+      // Raw datasets verified
+      expect(report.rawDatasets['LDEM_80S_80M.JP2'].status).toBe('VERIFIED')
+      expect(report.rawDatasets['AVGVISIB_65S_240M_201608.JP2'].status).toBe('VERIFIED')
+      expect(report.rawDatasets['AVGVISIB_65S_240M_201608_EARTH.JP2'].status).toBe('VERIFIED')
+      expect(report.rawDatasets['LPSR_65S_240M_201608.JP2'].status).toBe('VERIFIED')
+    })
+  })
 })
+

@@ -170,7 +170,7 @@ export function RobustnessAnalysis({
               className="btn btn--secondary btn--small"
               onClick={() => onNavigate('setup')}
             >
-              Modify Weights in Setup →
+              Switch Mission Purpose in Setup →
             </button>
           )}
         </div>
@@ -275,7 +275,7 @@ export function RobustnessAnalysis({
                 style={{ marginTop: '1rem' }}
                 onClick={() => onNavigate('setup')}
               >
-                Relax Constraints in Mission Setup →
+                Change Mission Purpose in Setup →
               </button>
             )}
           </div>
@@ -609,7 +609,7 @@ export function RobustnessAnalysis({
                 <div>
                   <span className="action-tag font-mono">COMPLETE DECISION PIPELINE</span>
                   <p className="action-text">
-                    Review candidate trade-offs in TOPSIS Results or adjust weight sliders in Mission Setup.
+                    Review candidate trade-offs in TOPSIS Results or switch mission purpose in Mission Setup.
                   </p>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>

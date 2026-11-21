@@ -1,0 +1,302 @@
+{
+  "timestamp": "2026-11-22T05:10:09.507542",
+  "coordinateSystem": {
+    "convention": "MEAN EARTH/POLAR AXIS OF DE421",
+    "body": "Moon",
+    "radiusKm": 1737.4,
+    "projection": "POLAR STEREOGRAPHIC"
+  },
+  "rawDatasets": {
+    "LDEM_80S_80M.JP2": {
+      "description": "NASA LOLA South Pole Elevation DEM (80m/pix)",
+      "exists": true,
+      "size_bytes": 29837992,
+      "size_ok": true,
+      "label_file": "LDEM_80S_80M_JP2.LBL",
+      "label_exists": true,
+      "status": "VERIFIED"
+    },
+    "AVGVISIB_65S_240M_201608.JP2": {
+      "description": "NASA PGDA Prod 69 Average Solar Illumination (240m/pix)",
+      "exists": true,
+      "size_bytes": 48625783,
+      "size_ok": true,
+      "label_file": "AVGVISIB_65S_240M_201608_JP2.LBL",
+      "label_exists": true,
+      "status": "VERIFIED"
+    },
+    "AVGVISIB_65S_240M_201608_EARTH.JP2": {
+      "description": "NASA PGDA Prod 69 Earth Line-of-Sight Visibility (240m/pix)",
+      "exists": true,
+      "size_bytes": 21812303,
+      "size_ok": true,
+      "label_file": "AVGVISIB_65S_240M_201608_EARTH_JP2.LBL",
+      "label_exists": true,
+      "status": "VERIFIED"
+    },
+    "LPSR_65S_240M_201608.JP2": {
+      "description": "NASA PGDA Prod 69 Permanently Shadowed Regions Mask",
+      "exists": true,
+      "size_bytes": 2632458,
+      "size_ok": true,
+      "label_file": "LPSR_65S_240M_201608_JP2.LBL",
+      "label_exists": true,
+      "status": "VERIFIED"
+    },
+    "LDRM_80S_1000MPP_ADJ_SLP_100M.TIF": {
+      "description": "NASA PGDA Prod 90 LOLA 100m Baseline Slope Map",
+      "exists": true,
+      "size_bytes": 1533793,
+      "size_ok": true,
+      "label_file": null,
+      "label_exists": true,
+      "status": "VERIFIED"
+    },
+    "LDRM_80S_1000MPP_ADJ_ROUGH_RGB.TIF": {
+      "description": "NASA PGDA Prod 90 LOLA Multi-Baseline Roughness Composite",
+      "exists": true,
+      "size_bytes": 2298965,
+      "size_ok": true,
+      "label_file": null,
+      "label_exists": true,
+      "status": "VERIFIED"
+    }
+  },
+  "processedLayers": {
+    "elevation_relief.webp": {
+      "exists": true,
+      "size_bytes": 82126,
+      "status": "VERIFIED"
+    },
+    "hillshade.webp": {
+      "exists": true,
+      "size_bytes": 495450,
+      "status": "VERIFIED"
+    },
+    "slope_relief.webp": {
+      "exists": true,
+      "size_bytes": 489952,
+      "status": "VERIFIED"
+    },
+    "roughness_composite.webp": {
+      "exists": true,
+      "size_bytes": 33474,
+      "status": "VERIFIED"
+    },
+    "illumination_relief.webp": {
+      "exists": true,
+      "size_bytes": 717720,
+      "status": "VERIFIED"
+    },
+    "psr_overlay.webp": {
+      "exists": true,
+      "size_bytes": 206384,
+      "status": "VERIFIED"
+    },
+    "earth_visibility.webp": {
+      "exists": true,
+      "size_bytes": 437594,
+      "status": "VERIFIED"
+    },
+    "elevation_grid.json": {
+      "exists": true,
+      "size_bytes": 5567576,
+      "status": "VERIFIED"
+    },
+    "metadata.json": {
+      "exists": true,
+      "size_bytes": 3605,
+      "status": "VERIFIED"
+    }
+  },
+  "candidateSitesAudit": {
+    "summary": {
+      "total_sites": 16,
+      "official_artemis_count": 13,
+      "scientific_research_count": 3,
+      "total_measurements_audited": 96,
+      "missing_measurements_disclosed": 2,
+      "uncertainty_bounds_verified": 94,
+      "validation_errors": []
+    },
+    "sites": [
+      {
+        "site_id": "artemis-faustini-rim-a",
+        "name": "Faustini Rim A",
+        "region": "Faustini Crater Complex",
+        "latitude": -87.88,
+        "longitude": 90.03,
+        "elevation_m": -913.0,
+        "designation": "official-artemis-candidate",
+        "resource_evidence_kind": "scientific-evidence",
+        "status": "VERIFIED"
+      },
+      {
+        "site_id": "artemis-peak-near-shackleton",
+        "name": "Peak Near Shackleton",
+        "region": "Shackleton Crater Rim Complex",
+        "latitude": -88.81,
+        "longitude": 123.69,
+        "elevation_m": 575.5,
+        "designation": "official-artemis-candidate",
+        "resource_evidence_kind": "proxy",
+        "status": "VERIFIED"
+      },
+      {
+        "site_id": "artemis-connecting-ridge",
+        "name": "Connecting Ridge",
+        "region": "Shackleton-de Gerlache Ridge",
+        "latitude": -89.45,
+        "longitude": -134.0,
+        "elevation_m": -1022.0,
+        "designation": "official-artemis-candidate",
+        "resource_evidence_kind": "scientific-evidence",
+        "status": "VERIFIED"
+      },
+      {
+        "site_id": "artemis-connecting-ridge-ext",
+        "name": "Connecting Ridge Extension",
+        "region": "Shackleton-de Gerlache Ridge Extension",
+        "latitude": -89.03,
+        "longitude": -102.0,
+        "elevation_m": -1210.0,
+        "designation": "official-artemis-candidate",
+        "resource_evidence_kind": "proxy",
+        "status": "VERIFIED"
+      },
+      {
+        "site_id": "artemis-de-gerlache-rim-1",
+        "name": "de Gerlache Rim 1",
+        "region": "de Gerlache Crater",
+        "latitude": -88.5,
+        "longitude": -68.0,
+        "elevation_m": -1450.5,
+        "designation": "official-artemis-candidate",
+        "resource_evidence_kind": "scientific-evidence",
+        "status": "VERIFIED"
+      },
+      {
+        "site_id": "artemis-de-gerlache-rim-2",
+        "name": "de Gerlache Rim 2",
+        "region": "de Gerlache Crater",
+        "latitude": -88.7,
+        "longitude": -64.0,
+        "elevation_m": -1380.0,
+        "designation": "official-artemis-candidate",
+        "resource_evidence_kind": "scientific-evidence",
+        "status": "VERIFIED"
+      },
+      {
+        "site_id": "artemis-de-gerlache-kocher-massif",
+        "name": "de Gerlache-Kocher Massif",
+        "region": "Kocher Highland Complex",
+        "latitude": -85.9,
+        "longitude": -117.0,
+        "elevation_m": -1620.0,
+        "designation": "official-artemis-candidate",
+        "resource_evidence_kind": "proxy",
+        "status": "VERIFIED"
+      },
+      {
+        "site_id": "artemis-haworth",
+        "name": "Haworth Rim & Bench",
+        "region": "Haworth Crater Rim & Bench",
+        "latitude": -87.45,
+        "longitude": -5.0,
+        "elevation_m": -1850.0,
+        "designation": "official-artemis-candidate",
+        "resource_evidence_kind": "scientific-evidence",
+        "status": "VERIFIED"
+      },
+      {
+        "site_id": "artemis-malapert-massif",
+        "name": "Malapert Massif",
+        "region": "Malapert Mountain Complex",
+        "latitude": -85.95,
+        "longitude": 2.8,
+        "elevation_m": -2483.5,
+        "designation": "official-artemis-candidate",
+        "resource_evidence_kind": "proxy",
+        "status": "VERIFIED"
+      },
+      {
+        "site_id": "artemis-leibnitz-beta-plateau",
+        "name": "Leibnitz Beta Plateau",
+        "region": "Mons Mouton / Leibnitz Beta",
+        "latitude": -85.4,
+        "longitude": 31.6,
+        "elevation_m": -2100.0,
+        "designation": "official-artemis-candidate",
+        "resource_evidence_kind": "proxy",
+        "status": "VERIFIED"
+      },
+      {
+        "site_id": "artemis-nobile-rim-1",
+        "name": "Nobile Rim 1",
+        "region": "Nobile Crater Complex",
+        "latitude": -85.3,
+        "longitude": 31.5,
+        "elevation_m": -2415.5,
+        "designation": "official-artemis-candidate",
+        "resource_evidence_kind": "scientific-evidence",
+        "status": "VERIFIED"
+      },
+      {
+        "site_id": "artemis-nobile-rim-2",
+        "name": "Nobile Rim 2",
+        "region": "Nobile Crater Complex",
+        "latitude": -83.93,
+        "longitude": 58.83,
+        "elevation_m": -2290.0,
+        "designation": "official-artemis-candidate",
+        "resource_evidence_kind": "scientific-evidence",
+        "status": "VERIFIED"
+      },
+      {
+        "site_id": "artemis-amundsen-rim",
+        "name": "Amundsen Rim",
+        "region": "Amundsen Crater Complex",
+        "latitude": -84.22,
+        "longitude": 69.35,
+        "elevation_m": -2650.0,
+        "designation": "official-artemis-candidate",
+        "resource_evidence_kind": "scientific-evidence",
+        "status": "VERIFIED"
+      },
+      {
+        "site_id": "cal-cabeus-lcross",
+        "name": "Cabeus LCROSS Impact Site",
+        "region": "Cabeus Crater Floor (PSR)",
+        "latitude": -84.9,
+        "longitude": -35.5,
+        "elevation_m": -2802.5,
+        "designation": "scientific-research-location",
+        "resource_evidence_kind": "direct-observation",
+        "status": "VERIFIED"
+      },
+      {
+        "site_id": "cal-shoemaker-unassessed",
+        "name": "Shoemaker Crater Cold Trap (Unassessed)",
+        "region": "Shoemaker Crater Floor (PSR)",
+        "latitude": -88.1,
+        "longitude": 45.0,
+        "elevation_m": -2150.0,
+        "designation": "scientific-research-location",
+        "resource_evidence_kind": "unknown",
+        "status": "VERIFIED"
+      },
+      {
+        "site_id": "cal-slater-radar-shadow",
+        "name": "Slater Crater Unsurveyed Ridge",
+        "region": "Slater Crater Rim Complex",
+        "latitude": -86.3,
+        "longitude": -12.0,
+        "elevation_m": -1950.0,
+        "designation": "scientific-research-location",
+        "resource_evidence_kind": "scientific-evidence",
+        "status": "VERIFIED"
+      }
+    ]
+  },
+  "overallStatus": "VERIFIED"
+}

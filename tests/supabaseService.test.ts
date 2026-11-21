@@ -145,4 +145,126 @@ describe('Supabase Data Access & Service Layer', () => {
     expect(ids).toContain('lro-diviner')
     expect(ids).toContain('nasa-artemis-sdt')
   })
+
+  it('map10TableToCentralizedSite correctly assembles site from 10-table normalized measurements', async () => {
+    const { map10TableToCentralizedSite } = await import('../src/services/siteService')
+
+    const siteRow = {
+      id: 'test-10table-site',
+      name: 'Test 10-Table Site',
+      region: 'Test South Pole',
+      latitude: -89.1,
+      longitude: 180.0,
+      elevation_m: -1500.0,
+      designation: 'official-artemis-candidate' as const,
+      source_organization: 'NASA Artemis Program',
+      source_url: 'https://www.nasa.gov',
+      coordinate_frame: 'DE421',
+      coordinate_status: 'verified',
+      is_psr: false,
+      psr_distance_km: 1.5,
+      description: 'Normalized 10-table site description.',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+
+    const measurements = [
+      {
+        id: 'test-slope',
+        site_id: 'test-10table-site',
+        criterion_id: 'slope',
+        dataset_version_id: 'pgda-prod-90-v1',
+        value: 7.2,
+        uncertainty_low: 6.0,
+        uncertainty_high: 8.5,
+        unit: 'degrees',
+        value_kind: 'measured' as const,
+        quality_rating: 'high' as const,
+        source_citation: 'NASA LOLA 50m Slope',
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: 'test-roughness',
+        site_id: 'test-10table-site',
+        criterion_id: 'roughness',
+        dataset_version_id: 'pgda-prod-90-v1',
+        value: 0.15,
+        uncertainty_low: 0.11,
+        uncertainty_high: 0.19,
+        unit: 'meters RMS',
+        value_kind: 'derived' as const,
+        quality_rating: 'high' as const,
+        source_citation: 'NASA LOLA 50m RMS',
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: 'test-illumination',
+        site_id: 'test-10table-site',
+        criterion_id: 'illumination',
+        dataset_version_id: 'pgda-prod-69-v1',
+        value: 80.0,
+        uncertainty_low: 75.0,
+        uncertainty_high: 85.0,
+        unit: 'percent',
+        value_kind: 'derived' as const,
+        quality_rating: 'high' as const,
+        source_citation: 'NASA PGDA Prod 69',
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: 'test-resource',
+        site_id: 'test-10table-site',
+        criterion_id: 'resource',
+        dataset_version_id: 'lend-epithermal-v1',
+        value: 65.0,
+        uncertainty_low: 50.0,
+        uncertainty_high: 80.0,
+        unit: 'score (0-100)',
+        value_kind: 'derived' as const,
+        quality_rating: 'medium' as const,
+        source_citation: 'LRO LEND',
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: 'test-communication',
+        site_id: 'test-10table-site',
+        criterion_id: 'communication',
+        dataset_version_id: 'pgda-prod-69-v1',
+        value: 85.0,
+        uncertainty_low: 80.0,
+        uncertainty_high: 90.0,
+        unit: 'percent',
+        value_kind: 'derived' as const,
+        quality_rating: 'high' as const,
+        source_citation: 'NASA PGDA Prod 69',
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: 'test-science',
+        site_id: 'test-10table-site',
+        criterion_id: 'science',
+        dataset_version_id: 'artemis-sdt-v1',
+        value: null,
+        uncertainty_low: null,
+        uncertainty_high: null,
+        unit: 'score (0-100)',
+        value_kind: 'estimated' as const,
+        quality_rating: 'low' as const,
+        source_citation: 'NASA Artemis SDT',
+        created_at: new Date().toISOString(),
+      },
+    ]
+
+    const mapped = map10TableToCentralizedSite(siteRow, measurements)
+    expect(mapped.id).toBe('test-10table-site')
+    expect(mapped.criteria.slope.value).toBe(7.2)
+    expect(mapped.criteria.slope.low).toBe(6.0)
+    expect(mapped.criteria.slope.high).toBe(8.5)
+    expect(mapped.criteria.roughness.value).toBe(0.15)
+    expect(mapped.criteria.illumination.value).toBe(80.0)
+    expect(mapped.criteria.science.value).toBeNull()
+    expect(mapped.measurements.elevation.value).toBe(-1500.0)
+    expect(mapped.measurements.isPsr.value).toBe(false)
+  })
 })
+

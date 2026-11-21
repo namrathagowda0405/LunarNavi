@@ -52,9 +52,10 @@ The frontend is implemented in **React 19** with **TypeScript** and bundled via 
 ### Core Frontend Subsystems
 
 1. **Mission Setup View (`MissionSetup.tsx`)**:
-   - Manages mission profile selection (`science`, `resource`, `crewed`, `communication`).
-   - Dynamic weight sliders with automatic proportional rebalancing ensuring $\sum w_i = 1.0$.
-   - Real-time physical constraint threshold configuration (e.g. maximum slope, minimum Earth visibility).
+   - Normalized mission-control interface focused on 3 required inputs: Mission Purpose (`science`, `resource`, `crewed`, `communication`), Planned Lunar Arrival Date, and Surface Stay Duration.
+   - Predefined criteria weights, thresholds, and operational rationales are mapped internally.
+   - Displays a transparent, read-only engineering standard summary for the active purpose.
+   - Transparently discloses ephemeris and 18.6-year precession-averaged dataset boundaries.
 
 2. **Cartographic Lunar Map (`LunarMap.tsx`)**:
    - HTML5 Canvas 2D hardware-accelerated rendering engine.

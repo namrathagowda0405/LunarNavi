@@ -142,14 +142,24 @@ describe('End-to-End Live Demo Flow (Steps 1 - 17)', () => {
     const scienceProfile = getDefaultMissionProfile('science')
     const crewedProfile = getDefaultMissionProfile('crewed')
     const commProfile = getDefaultMissionProfile('communication')
+    const resProfile = getDefaultMissionProfile('resource')
 
     const scienceRanking = rankSites(filterFeasibleSites(sites, scienceProfile), scienceProfile)
     const crewedRanking = rankSites(filterFeasibleSites(sites, crewedProfile), crewedProfile)
     const commRanking = rankSites(filterFeasibleSites(sites, commProfile), commProfile)
+    const resRanking = rankSites(filterFeasibleSites(sites, resProfile), resProfile)
 
     expect(scienceRanking.ranking[0]).toBeDefined()
     expect(crewedRanking.ranking[0]).toBeDefined()
     expect(commRanking.ranking[0]).toBeDefined()
+    expect(resRanking.ranking[0]).toBeDefined()
+
+    // Criteria weights differ according to stated mission purposes
+    expect(scienceProfile.weights.science).toBe(0.35)
+    expect(resProfile.weights.resource).toBe(0.35)
+    expect(crewedProfile.weights.slope).toBe(0.25)
+    expect(crewedProfile.weights.illumination).toBe(0.25)
+    expect(commProfile.weights.communication).toBe(0.40)
   })
 
   it('Step 15 & 16: Monte Carlo Robustness simulation executes stably with rank frequencies', () => {
@@ -181,4 +191,88 @@ describe('End-to-End Live Demo Flow (Steps 1 - 17)', () => {
     const views = ['overview', 'setup', 'map', 'sites', 'results', 'robustness', 'data-sources', 'about']
     expect(views.length).toBe(8)
   })
+
+  it('Stage 4 Audit: Complete Workflow Chain (Mission Setup -> Feasibility -> TOPSIS -> Monte Carlo -> Backup)', () => {
+    // 1. Mission inputs
+    const formState = getMissionPresetState('crewed', {
+      arrivalDate: '2028-09-15',
+      arrivalWindowDays: 6,
+      durationDays: 45,
+    })
+    expect(formState.missionType).toBe('crewed')
+    expect(formState.arrivalDate).toBe('2028-09-15')
+    expect(formState.durationDays).toBe(45)
+
+    // 2. Mission profile construction
+    const buildRes = buildMissionProfile(formState)
+    expect(buildRes.ok).toBe(true)
+    const profile = buildRes.profile!
+    expect(profile.description).toContain('2028-09-15')
+    expect(profile.description).toContain('45 Earth days')
+    expect(profile.description).toContain('NASA PGDA 18.6-yr multi-year validated model')
+
+    // 3. Feasibility filtering
+    const feasible = filterFeasibleSites(sites, profile)
+    expect(feasible.length).toBeGreaterThan(0)
+    expect(feasible.length).toBeLessThanOrEqual(sites.length)
+
+    // 4. TOPSIS ranking
+    const topsisRes = rankSites(feasible, profile)
+    expect(topsisRes.ranking.length).toBe(feasible.length)
+
+    // Verify mathematical bounds of TOPSIS closeness
+    for (const score of topsisRes.ranking) {
+      expect(score.closeness).toBeGreaterThanOrEqual(0.0)
+      expect(score.closeness).toBeLessThanOrEqual(1.0)
+      expect(score.distanceToIdeal).toBeGreaterThanOrEqual(0.0)
+      expect(score.distanceToAntiIdeal).toBeGreaterThanOrEqual(0.0)
+    }
+
+    // 5. Monte Carlo Robustness
+    const mcRes = runMonteCarlo(feasible, profile, {
+      seed: 42,
+      iterations: 500,
+      weightRelativeSpread: 0.15,
+    })
+    expect(mcRes.iterations).toBe(500)
+    expect(mcRes.sites.length).toBe(feasible.length)
+
+    // 6. Recommendation: Primary and Geographically Decorrelated Backup
+    const topRanked = topsisRes.ranking[0]
+    const primarySite = getSiteById(topRanked.id)!
+    expect(primarySite).toBeDefined()
+
+    const backupSite = getDecorrelatedBackupSite(
+      primarySite.id,
+      topsisRes.ranking.map((r) => r.id)
+    )
+    expect(backupSite).toBeDefined()
+    expect(backupSite!.id).not.toBe(primarySite.id)
+    expect(backupSite!.region).not.toBe(primarySite.region)
+  })
+
+  it('Stage 4 Audit: Feasibility Engine strictly eliminates sites with missing essential data or exceeded thresholds', () => {
+    const profile = getDefaultMissionProfile('crewed')
+
+    // Fake candidate with null slope (missing essential measurement)
+    const missingSlopeCandidate: CentralizedSite = {
+      ...sites[0],
+      id: 'test-missing-slope',
+      criteria: {
+        ...sites[0].criteria,
+        slope: {
+          value: null,
+          low: null,
+          high: null,
+          kind: 'estimated',
+          source: 'Missing test',
+          quality: 'low',
+        },
+      },
+    }
+
+    const filtered = filterFeasibleSites([missingSlopeCandidate], profile)
+    expect(filtered).toHaveLength(0) // Must NOT be admitted!
+  })
 })
+

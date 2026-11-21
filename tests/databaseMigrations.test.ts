@@ -121,4 +121,82 @@ describe('Supabase Database Migrations & Seed Verification', () => {
       expect(seed).toContain(`'${siteId}'`)
     }
   })
+
+  it('10-table RLS policy file exists and secures all 10 foundational tables', () => {
+    const rlsFile = path.join(currentDir, '../supabase/rls_10_tables.sql')
+    expect(fs.existsSync(rlsFile)).toBe(true)
+
+    const rlsContent = fs.readFileSync(rlsFile, 'utf-8')
+
+    const tenTables = [
+      'data_sources',
+      'dataset_versions',
+      'lunar_sites',
+      'criteria',
+      'site_measurements',
+      'mission_profiles',
+      'mission_criteria_weights',
+      'analysis_runs',
+      'analysis_results',
+      'simulation_runs',
+    ]
+
+    for (const tbl of tenTables) {
+      expect(rlsContent).toContain(`ALTER TABLE IF EXISTS public.${tbl} ENABLE ROW LEVEL SECURITY`)
+      expect(rlsContent).toContain(`ON public.${tbl}`)
+    }
+
+    // Immutable audit logs
+    expect(rlsContent).toContain('CREATE POLICY "Disallow update on analysis_runs"')
+    expect(rlsContent).toContain('CREATE POLICY "Disallow delete on analysis_runs"')
+    expect(rlsContent).toContain('CREATE POLICY "Disallow update on analysis_results"')
+    expect(rlsContent).toContain('CREATE POLICY "Disallow delete on analysis_results"')
+    expect(rlsContent).toContain('CREATE POLICY "Disallow update on simulation_runs"')
+    expect(rlsContent).toContain('CREATE POLICY "Disallow delete on simulation_runs"')
+  })
+
+  it('10-table seed file exists, contains ON CONFLICT DO NOTHING, and seeds all 10 tables', () => {
+    const seed10File = path.join(currentDir, '../supabase/seed_10_tables.sql')
+    expect(fs.existsSync(seed10File)).toBe(true)
+
+    const seedContent = fs.readFileSync(seed10File, 'utf-8')
+
+    expect(seedContent).toContain('INSERT INTO public.data_sources')
+    expect(seedContent).toContain('INSERT INTO public.dataset_versions')
+    expect(seedContent).toContain('INSERT INTO public.criteria')
+    expect(seedContent).toContain('INSERT INTO public.mission_profiles')
+    expect(seedContent).toContain('INSERT INTO public.mission_criteria_weights')
+    expect(seedContent).toContain('INSERT INTO public.lunar_sites')
+    expect(seedContent).toContain('INSERT INTO public.site_measurements')
+
+    // Uses non-destructive ON CONFLICT DO NOTHING
+    expect(seedContent).toContain('ON CONFLICT (id) DO NOTHING')
+
+    // Contains all 16 candidate site identifiers
+    const siteIds = [
+      'artemis-faustini-rim-a',
+      'artemis-peak-near-shackleton',
+      'artemis-connecting-ridge',
+      'artemis-connecting-ridge-ext',
+      'artemis-de-gerlache-rim-1',
+      'artemis-de-gerlache-rim-2',
+      'artemis-de-gerlache-kocher-massif',
+      'artemis-haworth',
+      'artemis-malapert-massif',
+      'artemis-leibnitz-beta-plateau',
+      'artemis-nobile-rim-1',
+      'artemis-nobile-rim-2',
+      'artemis-amundsen-rim',
+      'cal-cabeus-lcross',
+      'cal-shoemaker-unassessed',
+      'cal-slater-radar-shadow',
+      'shackleton-rim',
+      'amundsen-crater-floor',
+    ]
+
+    for (const siteId of siteIds) {
+      expect(seedContent).toContain(`'${siteId}'`)
+    }
+  })
 })
+
