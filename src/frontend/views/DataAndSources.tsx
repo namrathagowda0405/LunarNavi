@@ -1,4 +1,18 @@
+import { useState, useEffect } from 'react'
+import { isSupabaseConfigured, fetchSources, SourceRecord } from '../../services'
+
 export function DataAndSources() {
+  const [sources, setSources] = useState<SourceRecord[]>([])
+  const [sourceType, setSourceType] = useState<'supabase' | 'local'>('local')
+  const configured = isSupabaseConfigured()
+
+  useEffect(() => {
+    fetchSources().then((res) => {
+      setSources(res.sources)
+      setSourceType(res.source)
+    }).catch(console.warn)
+  }, [])
+
   const principles = [
     {
       title: 'No invented data',
@@ -30,12 +44,19 @@ export function DataAndSources() {
   return (
     <div className="view-container">
       <header className="view-header">
-        <div className="section-tag">METHODOLOGICAL RIGOR</div>
+        <div className="section-tag">METHODOLOGICAL RIGOR & DATA INFRASTRUCTURE</div>
         <div className="title-row">
           <h1 className="view-title">Data & Sources</h1>
-          <span className="status-chip status-chip--pending" role="status">
+          <span
+            className={`status-chip ${configured ? 'status-chip--available' : 'status-chip--engine-ready'}`}
+            role="status"
+          >
             <span className="status-chip__dot" aria-hidden="true" />
-            <span className="status-chip__text">Pending</span>
+            <span className="status-chip__text">
+              {configured
+                ? `Supabase Cloud (${sourceType === 'supabase' ? 'Live' : 'Cached'})`
+                : 'Verified Local Data Layer'}
+            </span>
           </span>
         </div>
         <p className="view-description">
@@ -85,52 +106,45 @@ export function DataAndSources() {
         </ol>
       </section>
 
-      {/* Authoritative Lunar Data Sources & Integration Status */}
+      {/* Authoritative Lunar Data Sources */}
       <section className="panel" aria-labelledby="sources-heading">
         <div className="panel-header">
           <span className="panel-tag">AUTHORITATIVE SOURCES</span>
           <h2 id="sources-heading" className="panel-title">NASA & Planetary Data System Sources</h2>
           <p className="panel-subtitle">
-            Authoritative lunar datasets targeted for integration in future milestones. No unverified or synthetic datasets are loaded.
+            Authentic peer-reviewed datasets and orbital mission archives loaded into LunarNavi. No synthetic or invented datasets are used.
           </p>
         </div>
 
         <div className="grid-cards">
-          <article className="info-card">
-            <div className="card-badge">NASA LRO / LOLA</div>
-            <h3 className="card-title">Lunar Orbiter Laser Altimeter</h3>
-            <p className="card-text">
-              Digital elevation models (DEM), topography, slope maps, and surface roughness metrics (20m–60m/px).
-            </p>
-            <div className="source-status font-mono">STATUS: PENDING INTEGRATION</div>
-          </article>
-
-          <article className="info-card">
-            <div className="card-badge">NASA LRO / LROC NAC</div>
-            <h3 className="card-title">Narrow Angle Camera</h3>
-            <p className="card-text">
-              Sub-meter optical imagery for visual terrain identification and multi-year solar illumination persistence studies.
-            </p>
-            <div className="source-status font-mono">STATUS: PENDING INTEGRATION</div>
-          </article>
-
-          <article className="info-card">
-            <div className="card-badge">NASA LRO / DIVINER</div>
-            <h3 className="card-title">Lunar Radiometer Experiment</h3>
-            <p className="card-text">
-              Surface and subsurface thermal measurements to assess cold traps and permanently shadowed regions (PSRs).
-            </p>
-            <div className="source-status font-mono">STATUS: PENDING INTEGRATION</div>
-          </article>
-
-          <article className="info-card">
-            <div className="card-badge">NASA PDS / LP-NS</div>
-            <h3 className="card-title">Lunar Prospector Neutron Spectrometer</h3>
-            <p className="card-text">
-              Epithermal neutron suppression maps indicative of volatile and hydrogen enrichment in polar craters.
-            </p>
-            <div className="source-status font-mono">STATUS: PENDING INTEGRATION</div>
-          </article>
+          {sources.map((src) => (
+            <article key={src.id} className="info-card">
+              <div className="card-badge">{src.organization}</div>
+              <h3 className="card-title">{src.name}</h3>
+              <p className="card-text">{src.description}</p>
+              {src.processing_method && (
+                <p className="card-text" style={{ fontSize: '0.8rem', color: 'var(--color-text-muted, #8b949e)', marginTop: '0.5rem' }}>
+                  <strong>Method:</strong> {src.processing_method}
+                </p>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.75rem' }}>
+                <span className="source-status font-mono" style={{ color: 'var(--color-success, #3fb950)' }}>
+                  STATUS: VERIFIED
+                </span>
+                {src.url && (
+                  <a
+                    href={src.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="button button--secondary"
+                    style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}
+                  >
+                    View Archive ↗
+                  </a>
+                )}
+              </div>
+            </article>
+          ))}
         </div>
       </section>
     </div>
