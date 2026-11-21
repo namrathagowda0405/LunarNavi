@@ -16,6 +16,9 @@ import {
   defaultFormState,
   formatWeightShare,
   FormConstraint,
+  getDefaultConstraintsForMission,
+  getMissionPresetState,
+  MISSION_WEIGHT_RATIONALE,
   MissionFormState,
   normalizeWeights,
   suggestedDirection,
@@ -35,6 +38,9 @@ export function MissionSetup({
   const [errors, setErrors] = useState<string[]>([])
   const errorBoxId = useId()
 
+  const typeOpt = MISSION_TYPES.find((t) => t.id === formState.missionType)
+  const currentRationale = MISSION_WEIGHT_RATIONALE[formState.missionType]
+
   // Calculate normalized shares for live display
   let normalizedShares: Record<CriterionId, number> | null = null
   let weightsError: string | null = null
@@ -46,11 +52,20 @@ export function MissionSetup({
   }
 
   // Handlers for Mission Type
-  const handleTypeSelect = (typeId: MissionTypeId) => {
+  const handleLoadDefaults = (typeId?: MissionTypeId) => {
+    const targetType = typeId ?? formState.missionType
+    const preset = getMissionPresetState(targetType)
     onFormChange({
       ...formState,
-      missionType: typeId,
+      missionType: targetType,
+      rawWeights: preset.rawWeights,
+      constraints: preset.constraints,
     })
+    setErrors([])
+  }
+
+  const handleTypeSelect = (typeId: MissionTypeId) => {
+    handleLoadDefaults(typeId)
   }
 
   // Handlers for Region
@@ -181,7 +196,7 @@ export function MissionSetup({
         <div className="notice-banner notice-banner--info" role="note">
           <span className="notice-icon" aria-hidden="true">ℹ</span>
           <span className="notice-text">
-            <strong>Mission presets are not available yet.</strong> Priorities below start at a neutral equal setting. Set them yourself.
+            <strong>Authoritative lunar mission profiles available:</strong> Select a mission below to view its specific priorities. Each profile includes scientifically defensible criteria weights and non-negotiable physical constraints based on NASA Artemis and lunar exploration studies.
           </span>
         </div>
 
@@ -190,10 +205,18 @@ export function MissionSetup({
             const isSelected = formState.missionType === type.id
             const inputId = `mission-type-${type.id}`
             return (
-              <label
+              <div
                 key={type.id}
-                htmlFor={inputId}
                 className={`mission-type-card ${isSelected ? 'mission-type-card--selected' : ''}`}
+                onClick={() => handleTypeSelect(type.id)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    handleTypeSelect(type.id)
+                  }
+                }}
               >
                 <div className="mission-type-card__header">
                   <input
@@ -205,10 +228,25 @@ export function MissionSetup({
                     onChange={() => handleTypeSelect(type.id)}
                     className="radio-control"
                   />
-                  <span className="mission-type-card__title">{type.label}</span>
+                  <label htmlFor={inputId} className="mission-type-card__title" style={{ cursor: 'pointer' }}>
+                    {type.label}
+                  </label>
                 </div>
                 <p className="mission-type-card__desc">{type.description}</p>
-              </label>
+                {isSelected && (
+                  <button
+                    type="button"
+                    className="btn btn--secondary btn--small"
+                    style={{ marginTop: '0.6rem', alignSelf: 'flex-start' }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleLoadDefaults(type.id)
+                    }}
+                  >
+                    Reset to {type.label} Defaults
+                  </button>
+                )}
+              </div>
             )
           })}
         </div>
@@ -256,15 +294,45 @@ export function MissionSetup({
               Adjust relative weights from 0 (ignored) to 10 (highest priority). Shares are normalized to sum to 100%.
             </p>
           </div>
-          <button
-            type="button"
-            className="btn btn--subtle"
-            onClick={handleResetToEqual}
-            aria-label="Reset all weights to equal value of 5"
-          >
-            Reset to equal
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn btn--secondary btn--small"
+              onClick={() => handleLoadDefaults(formState.missionType)}
+              title={`Reset weights and constraints to default ${typeOpt?.label} preset`}
+            >
+              Reset to {typeOpt?.label} Defaults
+            </button>
+            <button
+              type="button"
+              className="btn btn--subtle btn--small"
+              onClick={handleResetToEqual}
+              aria-label="Reset all weights to equal value of 5"
+            >
+              Reset to equal (5/10)
+            </button>
+          </div>
         </div>
+
+        {currentRationale && (
+          <div
+            className="notice-banner notice-banner--info"
+            role="region"
+            aria-label="Mission Weight Rationale"
+            style={{ marginBottom: '1.25rem' }}
+          >
+            <span className="notice-icon" aria-hidden="true">💡</span>
+            <div className="notice-content">
+              <strong>{currentRationale.title} — Documented Default Assumptions</strong>
+              <p style={{ margin: '0.25rem 0 0.25rem 0', fontSize: '0.875rem', lineHeight: '1.4' }}>
+                {currentRationale.rationale}
+              </p>
+              <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
+                <em>Reference weights: {currentRationale.weightsSummary} (All weights remain fully editable)</em>
+              </div>
+            </div>
+          </div>
+        )}
 
         {weightsError && (
           <div className="notice-banner notice-banner--error" role="alert">
@@ -356,9 +424,24 @@ export function MissionSetup({
         {formState.constraints.length === 0 ? (
           <div className="empty-constraints-notice" role="status">
             <span className="notice-icon" aria-hidden="true">🛡️</span>
-            <p className="empty-constraints-text">
-              No constraints added. Without constraints, no site is excluded on requirements.
-            </p>
+            <div>
+              <p className="empty-constraints-text">
+                No constraints added. Without constraints, no site is excluded on requirements.
+              </p>
+              <button
+                type="button"
+                className="btn btn--secondary btn--small"
+                style={{ marginTop: '0.75rem' }}
+                onClick={() =>
+                  onFormChange({
+                    ...formState,
+                    constraints: getDefaultConstraintsForMission(formState.missionType),
+                  })
+                }
+              >
+                + Load Recommended {typeOpt?.label} Constraints
+              </button>
+            </div>
           </div>
         ) : (
           <div className="constraints-list">

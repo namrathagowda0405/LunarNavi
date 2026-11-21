@@ -91,8 +91,8 @@ export const MODULES: ModuleInfo[] = [
     id: 'map',
     name: 'Lunar Surface Map',
     description: 'Visual spatial representation of candidate landing sites on the lunar surface.',
-    status: 'planned',
-    detail: 'Static map first',
+    status: 'engine-ready',
+    detail: 'Interactive LOLA polar map active with authentic elevation, hillshade, slope & roughness layers',
   },
   {
     id: 'results-dashboard',

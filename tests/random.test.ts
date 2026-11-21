@@ -21,13 +21,18 @@ describe('createRng (Mulberry32)', () => {
     const rng = createRng(42)
     const count = 100000
     let sum = 0
+    let min = 1
+    let max = 0
 
     for (let i = 0; i < count; i++) {
       const val = rng.next()
-      expect(val).toBeGreaterThanOrEqual(0)
-      expect(val).toBeLessThan(1)
+      if (val < min) min = val
+      if (val > max) max = val
       sum += val
     }
+
+    expect(min).toBeGreaterThanOrEqual(0)
+    expect(max).toBeLessThan(1)
 
     const mean = sum / count
     expect(mean).toBeGreaterThanOrEqual(0.49)
@@ -48,6 +53,8 @@ describe('sampleTriangular', () => {
     const rng = createRng(999)
     const count = 20000
     let sum = 0
+    let min = Infinity
+    let max = -Infinity
 
     const low = 0
     const mode = 2
@@ -56,10 +63,13 @@ describe('sampleTriangular', () => {
 
     for (let i = 0; i < count; i++) {
       const val = sampleTriangular(rng, low, mode, high)
-      expect(val).toBeGreaterThanOrEqual(low)
-      expect(val).toBeLessThanOrEqual(high)
+      if (val < min) min = val
+      if (val > max) max = val
       sum += val
     }
+
+    expect(min).toBeGreaterThanOrEqual(low)
+    expect(max).toBeLessThanOrEqual(high)
 
     const mean = sum / count
     expect(Math.abs(mean - expectedMean)).toBeLessThanOrEqual(0.05)

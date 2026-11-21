@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Sidebar, ViewId } from './frontend/Sidebar'
 import { OverviewDashboard } from './frontend/views/OverviewDashboard'
 import { MissionSetup } from './frontend/views/MissionSetup'
@@ -8,8 +8,8 @@ import { Results } from './frontend/views/Results'
 import { RobustnessAnalysis } from './frontend/views/RobustnessAnalysis'
 import { DataAndSources } from './frontend/views/DataAndSources'
 import { AboutLunarNavi } from './frontend/views/MissionOverview'
-import { defaultFormState, MissionFormState } from './frontend/missionForm'
-import { MissionProfile } from './engine/mission'
+import { defaultFormState, MissionFormState, buildMissionProfile } from './frontend/missionForm'
+import { MissionProfile, getDefaultMissionProfile } from './engine/mission'
 
 const VALID_VIEWS: ViewId[] = [
   'overview',
@@ -37,6 +37,15 @@ export function App() {
   const [formState, setFormState] = useState<MissionFormState>(defaultFormState)
   // Stored validated mission profile
   const [configuredMission, setConfiguredMission] = useState<MissionProfile | null>(null)
+
+  // Unified live active mission profile derived from formState, keeping all views in sync
+  const activeMission: MissionProfile = useMemo(() => {
+    const buildRes = buildMissionProfile(formState)
+    if (buildRes.ok && buildRes.profile) {
+      return buildRes.profile
+    }
+    return getDefaultMissionProfile(formState.missionType)
+  }, [formState])
 
   useEffect(() => {
     const handleHash = () => {
@@ -105,16 +114,38 @@ export function App() {
               onAnalyzeSuccess={handleAnalyzeSuccess}
             />
           )}
-          {activeView === 'map' && <LunarMap onNavigate={handleViewChange} />}
-          {activeView === 'sites' && <CandidateSites />}
+          {activeView === 'map' && (
+            <LunarMap
+              configuredMission={configuredMission}
+              activeMission={activeMission}
+              formState={formState}
+              onNavigate={handleViewChange}
+            />
+          )}
+          {activeView === 'sites' && (
+            <CandidateSites
+              configuredMission={configuredMission}
+              activeMission={activeMission}
+              formState={formState}
+              onNavigate={handleViewChange}
+            />
+          )}
           {activeView === 'results' && (
             <Results
               formState={formState}
               configuredMission={configuredMission}
+              activeMission={activeMission}
               onEditMission={() => handleViewChange('setup')}
+              onNavigate={handleViewChange}
             />
           )}
-          {activeView === 'robustness' && <RobustnessAnalysis onNavigate={handleViewChange} />}
+          {activeView === 'robustness' && (
+            <RobustnessAnalysis
+              activeMission={activeMission}
+              formState={formState}
+              onNavigate={handleViewChange}
+            />
+          )}
           {activeView === 'data-sources' && <DataAndSources />}
           {activeView === 'about' && <AboutLunarNavi />}
         </main>

@@ -35,9 +35,9 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
     {
       id: 'lunar-map',
       name: 'Interactive Lunar Map',
-      status: 'Planned',
-      statusType: 'planned',
-      detail: 'Polar stereographic GIS container with coordinate tracking, terrain layers, and candidate site overlays.',
+      status: 'Available',
+      statusType: 'available',
+      detail: 'Authentic NASA LOLA DEM polar stereographic map with interactive pan/zoom, live cursor elevation, and verified candidate overlays.',
       actionView: 'map',
     },
     {
@@ -96,9 +96,9 @@ export function OverviewDashboard({ onNavigate }: OverviewDashboardProps) {
       step: 2,
       title: 'Lunar Map',
       tag: 'STEP 2',
-      status: 'Planned',
-      statusClass: 'status-badge-planned',
-      desc: 'Visualize candidate landing locations in polar stereographic projection against lunar terrain.',
+      status: 'Available',
+      statusClass: 'status-badge-engine',
+      desc: 'Explore authentic NASA LOLA south-pole topography with live cursor elevation and candidate markers.',
       view: 'map' as ViewId,
     },
     {

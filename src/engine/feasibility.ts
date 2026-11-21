@@ -4,6 +4,9 @@ import { Constraint, MissionProfile } from './mission'
 // Feasibility status outcomes for an individual constraint or overall site evaluation.
 export type FeasibilityStatus = 'Pass' | 'Marginal' | 'Fail' | 'Cannot Assess'
 
+// Categorization tier for landing decision support
+export type FeasibilityCategory = 'feasible' | 'infeasible' | 'unknown'
+
 // Result of evaluating a single mission constraint against a site criterion.
 export interface ConstraintResult {
   criterion: CriterionId
@@ -12,6 +15,9 @@ export interface ConstraintResult {
   value: number | null
   status: FeasibilityStatus
   reason: string
+  threshold?: { pass: number; marginal: number }
+  source?: string
+  quality?: string
 }
 
 // Complete feasibility evaluation of a candidate landing site against a mission profile.
@@ -22,6 +28,7 @@ export interface FeasibilityResult {
   eligible: boolean
   constraintResults: ConstraintResult[]
   reasons: string[]
+  category?: FeasibilityCategory
 }
 
 /**
@@ -91,6 +98,16 @@ function buildConstraintReason(
   }
 }
 
+export function categorizeFeasibility(status: FeasibilityStatus): FeasibilityCategory {
+  if (status === 'Pass' || status === 'Marginal') {
+    return 'feasible'
+  }
+  if (status === 'Fail') {
+    return 'infeasible'
+  }
+  return 'unknown'
+}
+
 /**
  * Evaluates all constraints of a mission profile against a landing site.
  * Pure function with no side effects or mutations.
@@ -112,6 +129,8 @@ export function evaluateFeasibility(
   const constraintResults: ConstraintResult[] = mission.constraints.map((constraint) => {
     const criterionData = site.criteria[constraint.criterion]
     const value = criterionData !== undefined ? criterionData.value : null
+    const source = criterionData?.source
+    const quality = criterionData?.quality
     const status = evaluateConstraint(value, constraint)
     const reason = buildConstraintReason(constraint.criterion, value, status, constraint)
 
@@ -122,6 +141,9 @@ export function evaluateFeasibility(
       value,
       status,
       reason,
+      threshold: { pass: constraint.passLimit, marginal: constraint.marginalLimit },
+      source,
+      quality,
     }
   })
 
@@ -158,6 +180,7 @@ export function evaluateFeasibility(
   }
 
   const eligible = status === 'Pass' || status === 'Marginal'
+  const category = categorizeFeasibility(status)
   const reasons = constraintResults
     .filter((cr) => cr.status !== 'Pass')
     .map((cr) => cr.reason)
@@ -169,5 +192,57 @@ export function evaluateFeasibility(
     eligible,
     constraintResults,
     reasons,
+    category,
   }
 }
+
+export interface FeasibilitySiteEvaluation {
+  site: Site
+  result: FeasibilityResult
+}
+
+export interface FeasibilitySummary {
+  feasible: FeasibilitySiteEvaluation[]
+  infeasible: FeasibilitySiteEvaluation[]
+  unknown: FeasibilitySiteEvaluation[]
+  all: FeasibilitySiteEvaluation[]
+  totalCount: number
+  feasibleCount: number
+  infeasibleCount: number
+  unknownCount: number
+}
+
+/**
+ * Evaluates all candidate sites against a mission profile and groups them into
+ * Feasible, Infeasible, and Unknown categories.
+ */
+export function evaluateAllSites(sites: Site[], mission: MissionProfile): FeasibilitySummary {
+  const all: FeasibilitySiteEvaluation[] = sites.map((site) => ({
+    site,
+    result: evaluateFeasibility(site, mission),
+  }))
+
+  const feasible = all.filter((item) => item.result.category === 'feasible')
+  const infeasible = all.filter((item) => item.result.category === 'infeasible')
+  const unknown = all.filter((item) => item.result.category === 'unknown')
+
+  return {
+    feasible,
+    infeasible,
+    unknown,
+    all,
+    totalCount: all.length,
+    feasibleCount: feasible.length,
+    infeasibleCount: infeasible.length,
+    unknownCount: unknown.length,
+  }
+}
+
+/**
+ * Filters a list of candidate sites down to only those that are eligible/feasible
+ * (status 'Pass' or 'Marginal') under the specified mission profile.
+ */
+export function filterFeasibleSites(sites: Site[], mission: MissionProfile): Site[] {
+  return sites.filter((site) => evaluateFeasibility(site, mission).eligible)
+}
+

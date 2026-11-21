@@ -20,6 +20,244 @@ export interface MissionFormState {
   constraints: FormConstraint[]
 }
 
+export const MISSION_WEIGHT_RATIONALE: Record<
+  MissionTypeId,
+  { title: string; rationale: string; weightsSummary: string }
+> = {
+  science: {
+    title: 'Planetary Science Return Priority',
+    rationale:
+      'Prioritizes scientific value (35%) for maximum geologic and South Pole-Aitken sampling yield, balanced with touchdown safety (slope 15%, roughness 10%), solar power (15%), and data downlink (15%).',
+    weightsSummary: 'Science (35%), Slope (15%), Illumination (15%), Comms (15%), Resource (10%), Roughness (10%)',
+  },
+  resource: {
+    title: 'Cryogenic Volatile Prospecting Priority',
+    rationale:
+      'Prioritizes volatile indicators and cold-trap proximity (35%), paired with traverse slope safety (15%), rover mobility roughness (10%), illumination (15%), and geochemical context (15%).',
+    weightsSummary: 'Resource (35%), Slope (15%), Illumination (15%), Science (15%), Roughness (10%), Comms (10%)',
+  },
+  crewed: {
+    title: 'Astronaut Safety & Base Survival Priority',
+    rationale:
+      'Prioritizes strict human landing gear stability (slope 25%, roughness 15%), life-support solar array power (25%), and direct crew Earth communications (20%), with secondary ISRU potential (10%).',
+    weightsSummary: 'Slope (25%), Illumination (25%), Comms (20%), Roughness (15%), Resource (10%), Science (5%)',
+  },
+  communication: {
+    title: 'Telecom Hub Line-of-Sight Priority',
+    rationale:
+      'Prioritizes continuous direct line-of-sight Earth visibility (40%) and solar transmitter power (20%), with benign elevated plateau terrain (15%) for relay tower installation.',
+    weightsSummary: 'Comms (40%), Illumination (20%), Slope (15%), Roughness (10%), Science (10%), Resource (5%)',
+  },
+}
+
+/**
+ * Returns the default raw slider weights (0-10) for a given mission profile.
+ */
+export function getDefaultRawWeightsForMission(
+  typeId: MissionTypeId
+): Record<CriterionId, number> {
+  switch (typeId) {
+    case 'science':
+      return { slope: 3, roughness: 2, illumination: 3, resource: 2, communication: 3, science: 7 }
+    case 'resource':
+      return { slope: 3, roughness: 2, illumination: 3, resource: 7, communication: 2, science: 3 }
+    case 'crewed':
+      return { slope: 5, roughness: 3, illumination: 5, resource: 2, communication: 4, science: 1 }
+    case 'communication':
+      return { slope: 3, roughness: 2, illumination: 4, resource: 1, communication: 8, science: 2 }
+    default:
+      return { slope: 5, roughness: 5, illumination: 5, resource: 5, communication: 5, science: 5 }
+  }
+}
+
+/**
+ * Returns default engineering constraints for a given mission profile.
+ */
+export function getDefaultConstraintsForMission(typeId: MissionTypeId): FormConstraint[] {
+  switch (typeId) {
+    case 'science':
+      return [
+        {
+          id: 'const-sci-1',
+          criterion: 'slope',
+          direction: 'max',
+          passLimit: '15.0',
+          marginalLimit: '20.0',
+          essential: true,
+          rationale: 'Robotic science lander structural stability limit on polar regolith.',
+        },
+        {
+          id: 'const-sci-2',
+          criterion: 'roughness',
+          direction: 'max',
+          passLimit: '0.30',
+          marginalLimit: '0.50',
+          essential: true,
+          rationale: 'Descent engine nozzle clearance and landing footpad obstacle clearance.',
+        },
+        {
+          id: 'const-sci-3',
+          criterion: 'science',
+          direction: 'min',
+          passLimit: '60.0',
+          marginalLimit: '45.0',
+          essential: true,
+          rationale: 'Site must meet high exploration and planetary science prioritization threshold.',
+        },
+        {
+          id: 'const-sci-4',
+          criterion: 'illumination',
+          direction: 'min',
+          passLimit: '40.0',
+          marginalLimit: '25.0',
+          essential: false,
+          rationale: 'Solar array operational power threshold; battery buffering auxiliary.',
+        },
+        {
+          id: 'const-sci-5',
+          criterion: 'communication',
+          direction: 'min',
+          passLimit: '30.0',
+          marginalLimit: '15.0',
+          essential: false,
+          rationale: 'Direct Earth telemetry downlink threshold.',
+        },
+      ]
+    case 'resource':
+      return [
+        {
+          id: 'const-res-1',
+          criterion: 'resource',
+          direction: 'min',
+          passLimit: '40.0',
+          marginalLimit: '25.0',
+          essential: true,
+          rationale: 'Proximity to cryogenic volatile indicators or permanently shadowed cold traps.',
+        },
+        {
+          id: 'const-res-2',
+          criterion: 'slope',
+          direction: 'max',
+          passLimit: '12.0',
+          marginalLimit: '16.0',
+          essential: true,
+          rationale: 'Prospecting rover rim-to-floor traverse navigability limit.',
+        },
+        {
+          id: 'const-res-3',
+          criterion: 'roughness',
+          direction: 'max',
+          passLimit: '0.25',
+          marginalLimit: '0.40',
+          essential: true,
+          rationale: 'Rover chassis clearance over blocky polar regolith.',
+        },
+        {
+          id: 'const-res-4',
+          criterion: 'illumination',
+          direction: 'min',
+          passLimit: '35.0',
+          marginalLimit: '20.0',
+          essential: false,
+          rationale: 'Rover battery solar recharging threshold.',
+        },
+      ]
+    case 'crewed':
+      return [
+        {
+          id: 'const-crew-1',
+          criterion: 'slope',
+          direction: 'max',
+          passLimit: '8.0',
+          marginalLimit: '10.0',
+          essential: true,
+          rationale: 'Human Landing System (HLS) strict touchdown stability limit to prevent tip-over.',
+        },
+        {
+          id: 'const-crew-2',
+          criterion: 'roughness',
+          direction: 'max',
+          passLimit: '0.15',
+          marginalLimit: '0.25',
+          essential: true,
+          rationale: 'Human-rated landing gear footpad obstacle tolerance.',
+        },
+        {
+          id: 'const-crew-3',
+          criterion: 'illumination',
+          direction: 'min',
+          passLimit: '50.0',
+          marginalLimit: '35.0',
+          essential: true,
+          rationale: 'Habitat life-support power generation and thermal survival requirements.',
+        },
+        {
+          id: 'const-crew-4',
+          criterion: 'communication',
+          direction: 'min',
+          passLimit: '50.0',
+          marginalLimit: '30.0',
+          essential: true,
+          rationale: 'Continuous direct-to-Earth communication for astronaut health and safety.',
+        },
+        {
+          id: 'const-crew-5',
+          criterion: 'resource',
+          direction: 'min',
+          passLimit: '20.0',
+          marginalLimit: '10.0',
+          essential: false,
+          rationale: 'Secondary proximity to volatile deposits for long-term outpost ISRU development.',
+        },
+      ]
+    case 'communication':
+      return [
+        {
+          id: 'const-comm-1',
+          criterion: 'communication',
+          direction: 'min',
+          passLimit: '70.0',
+          marginalLimit: '50.0',
+          essential: true,
+          rationale: 'High-availability Earth line-of-sight requirement for polar telecom outpost.',
+        },
+        {
+          id: 'const-comm-2',
+          criterion: 'slope',
+          direction: 'max',
+          passLimit: '12.0',
+          marginalLimit: '16.0',
+          essential: true,
+          rationale: 'Relay antenna tower platform stability limit.',
+        },
+        {
+          id: 'const-comm-3',
+          criterion: 'illumination',
+          direction: 'min',
+          passLimit: '40.0',
+          marginalLimit: '25.0',
+          essential: false,
+          rationale: 'Continuous power for communication transmitter.',
+        },
+      ]
+    default:
+      return []
+  }
+}
+
+/**
+ * Returns a complete form state initialized with the default preset values
+ * for a specific mission profile.
+ */
+export function getMissionPresetState(typeId: MissionTypeId): MissionFormState {
+  return {
+    missionType: typeId,
+    region: 'south-pole',
+    rawWeights: getDefaultRawWeightsForMission(typeId),
+    constraints: getDefaultConstraintsForMission(typeId),
+  }
+}
+
 /**
  * Returns the default initial state for the Mission Setup form.
  * Starts with neutral equal priorities (5 out of 10) for all criteria,
