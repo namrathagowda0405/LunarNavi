@@ -150,12 +150,12 @@ describe('Landing Page & Astronomy Engine Ephemeris Model', () => {
     expect(content).not.toContain('ASTRONOMICAL REFERENCE')
   })
 
-  it('keeps only genuinely implemented Direct Access shortcuts (Lunar Map, Candidate Sites, Data & Sources)', () => {
+  it('keeps only genuinely implemented Direct Access shortcuts (Lunar Map, Results & Ranking, Data & Sources)', () => {
     const landingFile = path.join(currentDir, '../src/frontend/views/LandingPage.tsx')
     const content = fs.readFileSync(landingFile, 'utf-8')
 
     expect(content).toContain('Lunar Map')
-    expect(content).toContain('Candidate Sites')
+    expect(content).toContain('Results & Ranking')
     expect(content).toContain('Data & Sources')
 
     // Mission Setup removed from landing shortcuts

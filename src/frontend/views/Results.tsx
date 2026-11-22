@@ -231,9 +231,9 @@ export function Results({
               <button
                 type="button"
                 className="btn btn--secondary btn--small"
-                onClick={() => onNavigate('sites')}
+                onClick={() => onNavigate('map')}
               >
-                View Feasibility Breakdown
+                View on Lunar Map ↗
               </button>
             )}
           </div>

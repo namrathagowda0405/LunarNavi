@@ -4,7 +4,6 @@ import { LandingPage } from './frontend/views/LandingPage'
 import { OverviewDashboard } from './frontend/views/OverviewDashboard'
 import { MissionSetup } from './frontend/views/MissionSetup'
 import { LunarMap } from './frontend/views/LunarMap'
-import { CandidateSites } from './frontend/views/CandidateSites'
 import { Results } from './frontend/views/Results'
 import { RobustnessAnalysis } from './frontend/views/RobustnessAnalysis'
 import { DataAndSources } from './frontend/views/DataAndSources'
@@ -17,7 +16,6 @@ const VALID_VIEWS: ViewId[] = [
   'overview',
   'setup',
   'map',
-  'sites',
   'results',
   'robustness',
   'data-sources',
@@ -208,14 +206,6 @@ export function App() {
               formState={formState}
               onNavigate={handleViewChange}
               targetSiteId={targetMapSiteId}
-            />
-          )}
-          {activeView === 'sites' && (
-            <CandidateSites
-              configuredMission={configuredMission}
-              activeMission={activeMission}
-              formState={formState}
-              onNavigate={handleViewChange}
             />
           )}
           {activeView === 'results' && (

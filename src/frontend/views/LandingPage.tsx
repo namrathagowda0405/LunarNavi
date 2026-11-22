@@ -150,9 +150,9 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
               <button
                 type="button"
                 className="quick-access-pill"
-                onClick={() => onNavigate('sites')}
+                onClick={() => onNavigate('results')}
               >
-                Candidate Sites
+                Results & Ranking
               </button>
               <button
                 type="button"

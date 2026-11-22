@@ -118,7 +118,7 @@ export function OverviewDashboard({
       status: 'Available',
       statusClass: 'status-badge-available',
       desc: 'Deterministic pass/marginal filtering eliminating candidate sites violating safety constraints.',
-      view: 'sites',
+      view: 'results',
     },
     {
       step: 4,
@@ -294,10 +294,10 @@ export function OverviewDashboard({
             <button
               type="button"
               className="btn btn--secondary"
-              onClick={() => onNavigate('sites')}
+              onClick={() => onNavigate('map')}
               style={{ width: '100%' }}
             >
-              Inspect Candidate Site Database ({totalSiteCount} Sites) →
+              Explore Candidate Sites on Lunar Map ({totalSiteCount} Sites) →
             </button>
           </div>
         </section>

@@ -188,8 +188,8 @@ describe('End-to-End Live Demo Flow (Steps 1 - 17)', () => {
   })
 
   it('Step 17: All views are registered and valid', () => {
-    const views = ['overview', 'setup', 'map', 'sites', 'results', 'robustness', 'data-sources', 'about']
-    expect(views.length).toBe(8)
+    const views = ['overview', 'setup', 'results', 'map', 'robustness', 'data-sources', 'about']
+    expect(views.length).toBe(7)
   })
 
   it('Stage 4 Audit: Complete Workflow Chain (Mission Setup -> Feasibility -> TOPSIS -> Monte Carlo -> Backup)', () => {

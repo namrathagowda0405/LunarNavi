@@ -1321,14 +1321,6 @@ export function LunarMap({
                     >
                       Results & Ranking →
                     </button>
-                    <button
-                      type="button"
-                      className="btn btn--subtle btn--small"
-                      style={{ fontSize: '0.725rem' }}
-                      onClick={() => onNavigate('sites')}
-                    >
-                      Sites Table →
-                    </button>
                   </>
                 )}
               </div>
