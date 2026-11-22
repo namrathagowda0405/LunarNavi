@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Sidebar, ViewId } from './frontend/Sidebar'
+import { LandingPage } from './frontend/views/LandingPage'
 import { OverviewDashboard } from './frontend/views/OverviewDashboard'
 import { MissionSetup } from './frontend/views/MissionSetup'
 import { LunarMap } from './frontend/views/LunarMap'
@@ -12,6 +13,7 @@ import { defaultFormState, MissionFormState, buildMissionProfile } from './front
 import { MissionProfile, getDefaultMissionProfile } from './engine/mission'
 
 const VALID_VIEWS: ViewId[] = [
+  'landing',
   'overview',
   'setup',
   'map',
@@ -27,7 +29,7 @@ function getInitialView(): ViewId {
     const raw = window.location.hash.replace(/^#\/?/, '') as ViewId
     if (VALID_VIEWS.includes(raw)) return raw
   }
-  return 'overview'
+  return 'landing'
 }
 
 const FORM_STATE_STORAGE_KEY = 'lunarnavi_form_state'
@@ -58,7 +60,7 @@ function getInitialConfiguredMission(): MissionProfile | null {
 }
 
 export function App() {
-  // Default to Overview Dashboard as the landing page, or sync with URL hash
+  // Default to Welcome Landing Page, or sync with URL hash
   const [activeView, setActiveView] = useState<ViewId>(getInitialView)
   // Form state preserved across navigation and page refresh
   const [formState, setFormState] = useState<MissionFormState>(getInitialFormState)
@@ -123,6 +125,11 @@ export function App() {
     handleViewChange('map')
   }
 
+  // Render full-bleed space Landing Page when on landing view
+  if (activeView === 'landing') {
+    return <LandingPage onNavigate={handleViewChange} />
+  }
+
   return (
     <div className="app-shell">
       {/* Accessibility Skip Link */}
@@ -132,7 +139,21 @@ export function App() {
 
       {/* Global Top Bar */}
       <header className="topbar" role="banner">
-        <div className="topbar__brand">
+        <div
+          className="topbar__brand"
+          style={{ cursor: 'pointer' }}
+          onClick={() => handleViewChange('landing')}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              handleViewChange('landing')
+            }
+          }}
+          title="Return to LunarNavi Landing Portal"
+          aria-label="Return to LunarNavi Landing Portal"
+        >
           <div className="topbar__logo" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="12" cy="12" r="9" />
@@ -159,7 +180,14 @@ export function App() {
         <Sidebar activeView={activeView} onViewChange={handleViewChange} />
 
         <main id="main-content" className="app-content" tabIndex={-1}>
-          {activeView === 'overview' && <OverviewDashboard onNavigate={handleViewChange} />}
+          {activeView === 'overview' && (
+            <OverviewDashboard
+              onNavigate={handleViewChange}
+              configuredMission={configuredMission}
+              activeMission={activeMission}
+              formState={formState}
+            />
+          )}
           {activeView === 'setup' && (
             <MissionSetup
               formState={formState}

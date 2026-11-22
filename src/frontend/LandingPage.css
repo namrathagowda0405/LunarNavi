@@ -1,0 +1,626 @@
+/* ==============================================================================
+   LunarNavi — The Lunar Observatory Visual Identity
+   ============================================================================== */
+
+/* Base Observatory Page Shell */
+.observatory-page {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  background-color: #020409;
+  /* Deep midnight navy and near-black base gradients */
+  background-image:
+    /* Layer 1: Restrained distant blue/violet nebula wash (understated cosmic depth) */
+    radial-gradient(ellipse 70% 50% at 75% 35%, rgba(20, 36, 75, 0.35) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 45% at 25% 65%, rgba(28, 18, 56, 0.22) 0%, transparent 65%),
+    radial-gradient(circle at 50% 15%, rgba(14, 28, 58, 0.25) 0%, transparent 55%),
+    /* Layer 2: Deep space vertical gradient */
+    linear-gradient(180deg, #02040a 0%, #050a18 45%, #030713 100%);
+  color: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
+}
+
+/* Layered Starfield with Depth and Restrained Glowing Stars */
+.space-stars-depth {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    /* Micro distant stars (fine astronomical dust) */
+    radial-gradient(1px 1px at 35px 50px, rgba(255, 255, 255, 0.45), transparent),
+    radial-gradient(1px 1px at 120px 210px, rgba(255, 255, 255, 0.35), transparent),
+    radial-gradient(1px 1px at 280px 140px, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(1px 1px at 450px 320px, rgba(255, 255, 255, 0.3), transparent),
+    radial-gradient(1px 1px at 620px 180px, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1px 1px at 840px 380px, rgba(255, 255, 255, 0.35), transparent),
+    radial-gradient(1px 1px at 1040px 120px, rgba(255, 255, 255, 0.45), transparent),
+    radial-gradient(1px 1px at 1320px 290px, rgba(255, 255, 255, 0.3), transparent),
+    radial-gradient(1px 1px at 1520px 80px, rgba(255, 255, 255, 0.4), transparent),
+    /* Mid-range stars */
+    radial-gradient(1.5px 1.5px at 190px 340px, rgba(240, 246, 252, 0.65), transparent),
+    radial-gradient(1.5px 1.5px at 530px 90px, rgba(226, 232, 240, 0.6), transparent),
+    radial-gradient(1.5px 1.5px at 780px 260px, rgba(240, 246, 252, 0.7), transparent),
+    radial-gradient(1.5px 1.5px at 1190px 410px, rgba(226, 232, 240, 0.65), transparent),
+    radial-gradient(1.5px 1.5px at 1420px 220px, rgba(240, 246, 252, 0.6), transparent),
+    /* Restrained glowing stars (soft luminous stellar pinpoints) */
+    radial-gradient(2px 2px at 340px 85px, rgba(255, 255, 255, 0.9), rgba(56, 189, 248, 0.4) 2px, transparent 4px),
+    radial-gradient(2px 2px at 920px 160px, rgba(255, 255, 255, 0.85), rgba(45, 212, 191, 0.3) 2px, transparent 4px),
+    radial-gradient(2.2px 2.2px at 1380px 360px, rgba(255, 255, 255, 0.9), rgba(226, 232, 240, 0.4) 2px, transparent 4px);
+  background-size:
+    360px 360px, 480px 480px, 420px 420px, 520px 520px, 600px 600px, 580px 580px, 640px 640px, 700px 700px, 750px 750px,
+    500px 500px, 550px 550px, 620px 620px, 680px 680px, 720px 720px,
+    700px 700px, 800px 800px, 900px 900px;
+  background-repeat: repeat;
+  z-index: 1;
+}
+
+/* Very subtle distant nebula ambient depth */
+.space-nebula-glow {
+  position: absolute;
+  top: 10%;
+  right: 5%;
+  width: 55vw;
+  height: 55vw;
+  max-width: 750px;
+  max-height: 750px;
+  background: radial-gradient(circle, rgba(30, 58, 120, 0.14) 0%, rgba(45, 212, 191, 0.02) 40%, transparent 68%);
+  pointer-events: none;
+  z-index: 1;
+  filter: blur(50px);
+}
+
+/* Faint Celestial Coordinate & Orbital Arc Overlay */
+.celestial-grid-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0.8;
+}
+
+/* Top Observatory Brand Header */
+.observatory-header {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 3.5rem;
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+.observatory-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.observatory-logo-mark {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(45, 212, 191, 0.16), rgba(30, 58, 110, 0.1));
+  border: 1px solid rgba(45, 212, 191, 0.35);
+  border-radius: 50%;
+  color: #2dd4bf;
+  box-shadow: 0 0 16px rgba(45, 212, 191, 0.18);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.observatory-brand:hover .observatory-logo-mark {
+  border-color: rgba(45, 212, 191, 0.6);
+  box-shadow: 0 0 22px rgba(45, 212, 191, 0.3);
+}
+
+.observatory-logo-mark svg {
+  width: 20px;
+  height: 20px;
+}
+
+.observatory-brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.observatory-brand-name {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #f8fafc;
+}
+
+.observatory-brand-descriptor {
+  font-size: 0.72rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: #94a3b8;
+}
+
+.observatory-header-actions {
+  display: flex;
+  align-items: center;
+}
+
+.observatory-header-btn {
+  background: rgba(11, 19, 38, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  color: #e2e8f0;
+  padding: 0.5rem 1.15rem;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  transition: all 0.2s ease;
+}
+
+.observatory-header-btn:hover {
+  background: rgba(22, 36, 68, 0.8);
+  border-color: rgba(45, 212, 191, 0.45);
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(45, 212, 191, 0.16);
+}
+
+.observatory-btn-arrow {
+  transition: transform 0.2s ease;
+}
+
+.observatory-header-btn:hover .observatory-btn-arrow {
+  transform: translateX(3px);
+}
+
+/* Main Hero Area */
+.observatory-hero {
+  position: relative;
+  z-index: 5;
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  align-items: center;
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 1.5rem 3.5rem 2.5rem 3.5rem;
+  gap: 3.5rem;
+}
+
+/* Left Hero Narrative */
+.observatory-narrative {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  max-width: 640px;
+}
+
+/* Tagline Container */
+.observatory-tagline-container {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.85rem;
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 9999px;
+  margin-bottom: 1.25rem;
+  backdrop-filter: blur(8px);
+}
+
+.observatory-tagline-text {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #94a3b8;
+  letter-spacing: 0.01em;
+}
+
+/* Eyebrow Label */
+.observatory-eyebrow {
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: #2dd4bf;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+
+/* Main Headline */
+.observatory-headline {
+  font-size: clamp(2.8rem, 5.2vw, 4.4rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  color: #f8fafc;
+  margin-bottom: 1.25rem;
+}
+
+/* Supporting Text */
+.observatory-supporting-text {
+  font-size: clamp(1.1rem, 1.8vw, 1.28rem);
+  font-weight: 400;
+  line-height: 1.55;
+  color: #94a3b8;
+  margin-bottom: 2.25rem;
+  max-width: 560px;
+}
+
+/* Primary Action Group */
+.observatory-action-group {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: 2.25rem;
+}
+
+.observatory-primary-cta {
+  background: linear-gradient(135deg, #2dd4bf 0%, #0d9488 100%);
+  color: #042f2e;
+  border: none;
+  padding: 0.95rem 2.25rem;
+  border-radius: 9999px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.015em;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  box-shadow: 0 4px 22px rgba(45, 212, 191, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.observatory-primary-cta:hover {
+  transform: translateY(-2px);
+  background: linear-gradient(135deg, #5eead4 0%, #14b8a6 100%);
+  box-shadow: 0 6px 28px rgba(45, 212, 191, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.observatory-primary-cta:active {
+  transform: translateY(0);
+}
+
+.observatory-primary-cta svg {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.2s ease;
+}
+
+.observatory-primary-cta:hover svg {
+  transform: translateX(3px);
+}
+
+/* Quick Access Navigation Pills */
+.observatory-quick-access {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+  width: 100%;
+}
+
+.quick-access-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  color: #64748b;
+  margin-right: 0.25rem;
+}
+
+.quick-access-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.quick-access-pill {
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  color: #94a3b8;
+  padding: 0.45rem 0.9rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.quick-access-pill:hover {
+  background: rgba(26, 40, 72, 0.8);
+  border-color: rgba(45, 212, 191, 0.4);
+  color: #f8fafc;
+}
+
+/* Right Side: Unobstructed 3D Moon Stage */
+.observatory-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 520px;
+}
+
+.observatory-moon-canvas-wrap {
+  width: 100%;
+  max-width: 600px;
+  height: 540px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 3D Canvas Internals */
+.lunar-globe-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lunar-globe-canvas-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lunar-globe-canvas-container canvas {
+  outline: none;
+  /* Soft lunar atmospheric presence in space */
+  filter: drop-shadow(0 0 55px rgba(22, 38, 74, 0.6)) drop-shadow(0 0 25px rgba(45, 212, 191, 0.08));
+}
+
+.lunar-globe-controls {
+  position: absolute;
+  top: 1rem;
+  right: 1.25rem;
+  z-index: 8;
+  pointer-events: auto;
+}
+
+.lunar-globe-reset-btn {
+  background: rgba(11, 19, 38, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  color: #94a3b8;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  padding: 0.28rem 0.65rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(8px);
+}
+
+.lunar-globe-reset-btn:hover {
+  background: rgba(15, 28, 54, 0.9);
+  border-color: rgba(45, 212, 191, 0.45);
+  color: #2dd4bf;
+  box-shadow: 0 0 12px rgba(45, 212, 191, 0.15);
+}
+
+.lunar-globe-loader {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.lunar-globe-spinner {
+  width: 34px;
+  height: 34px;
+  border: 2px solid rgba(45, 212, 191, 0.2);
+  border-top-color: #2dd4bf;
+  border-radius: 50%;
+  animation: spin 1s infinite linear;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Optical Fallback */
+.lunar-globe-fallback {
+  position: relative;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: inset -30px -30px 65px rgba(0, 0, 0, 0.95), 0 0 45px rgba(30, 58, 120, 0.35);
+}
+
+.lunar-fallback-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: contrast(1.15) brightness(0.95);
+}
+
+.lunar-fallback-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 30% 30%, transparent 45%, rgba(2, 4, 9, 0.88) 85%);
+  pointer-events: none;
+}
+
+.lunar-fallback-badge {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(11, 19, 38, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+
+
+/* Footer & Methodological Disclaimer */
+.observatory-footer {
+  position: relative;
+  z-index: 5;
+  padding: 1.25rem 3.5rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  max-width: 1440px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.observatory-disclaimer {
+  font-size: 0.73rem;
+  color: #64748b;
+  max-width: 700px;
+  line-height: 1.45;
+}
+
+.observatory-disclaimer strong {
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.observatory-footer-links {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.observatory-link {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s ease;
+}
+
+.observatory-link:hover {
+  color: #2dd4bf;
+}
+
+.observatory-link-dot {
+  color: #475569;
+  font-size: 0.75rem;
+}
+
+/* Responsive Tablet & Mobile Breakpoints */
+@media (max-width: 1024px) {
+  .observatory-header {
+    padding: 1.25rem 2rem;
+  }
+
+  .observatory-hero {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+    padding: 1rem 2rem 2rem 2rem;
+    text-align: center;
+  }
+
+  .observatory-narrative {
+    align-items: center;
+    max-width: 100%;
+  }
+
+  .observatory-headline {
+    font-size: clamp(2.4rem, 7vw, 3.6rem);
+  }
+
+  .observatory-supporting-text {
+    max-width: 100%;
+  }
+
+  .observatory-action-group {
+    justify-content: center;
+  }
+
+  .observatory-quick-access {
+    justify-content: center;
+  }
+
+  .observatory-moon-canvas-wrap {
+    max-width: 440px;
+    height: 420px;
+  }
+
+  .lunar-telemetry-strip {
+    padding: 0 2rem 2rem 2rem;
+  }
+
+  .telemetry-strip-container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1.25rem;
+  }
+
+  .telemetry-strip-metrics {
+    justify-content: space-between;
+  }
+
+  .observatory-footer {
+    padding: 1.25rem 2rem;
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .observatory-header {
+    padding: 1rem 1.25rem;
+  }
+
+  .observatory-brand-descriptor {
+    display: none;
+  }
+
+  .observatory-hero {
+    padding: 1rem 1.25rem 1.5rem 1.25rem;
+  }
+
+  .observatory-headline {
+    font-size: 2.2rem;
+  }
+
+  .observatory-supporting-text {
+    font-size: 1.05rem;
+  }
+
+  .observatory-moon-canvas-wrap {
+    max-width: 320px;
+    height: 320px;
+  }
+
+  .observatory-primary-cta {
+    width: 100%;
+    justify-content: center;
+  }
+}
