@@ -40,6 +40,8 @@ interface MetricsGridData {
   isPsr?: number[]
 }
 
+const MOON_OFFSET_Y = 110
+
 export function LunarMap({
   configuredMission,
   activeMission: propActiveMission,
@@ -215,7 +217,7 @@ export function LunarMap({
 
       // Compute normalized coordinates on the 600x600 lunar raster
       const rasterCenterX = rect.width / 2 + pan.x
-      const rasterCenterY = rect.height / 2 + pan.y
+      const rasterCenterY = rect.height / 2 + MOON_OFFSET_Y + pan.y
       const rasterSize = 600 * zoom
 
       const mouseRelX = e.clientX - rect.left - (rasterCenterX - rasterSize / 2)
@@ -547,6 +549,7 @@ export function LunarMap({
             <div
               className="lunar-map-raster-container"
               style={{
+                top: `calc(50% + ${MOON_OFFSET_Y}px)`,
                 transform: `translate(-50%, -50%) scale(${zoom})`,
               }}
             >
@@ -1086,7 +1089,7 @@ export function LunarMap({
               className="landmark-inspection-popover"
               role="dialog"
               aria-labelledby="popover-site-title"
-              style={{ maxWidth: '420px', maxHeight: '85%', overflowY: 'auto' }}
+              style={{ maxWidth: '440px', maxHeight: 'clamp(270px, 35vh, 320px)', overflowY: 'auto' }}
             >
               <div className="inspection-header">
                 <div>
