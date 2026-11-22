@@ -2,6 +2,11 @@
 
 > **Mission-Aware Lunar South-Pole Landing Site Multi-Criteria Decision Support Platform**
 
+### 🚀 Live Demo: [https://lunarnavi.onrender.com](https://lunarnavi.onrender.com)
+
+[![Live Demo](https://img.shields.io/badge/🚀%20Live%20Demo-lunarnavi.onrender.com-00C7B7?style=for-the-badge&logo=render&logoColor=white)](https://lunarnavi.onrender.com)
+[![Direct Link: Robustness Analysis](https://img.shields.io/badge/📊%20Direct%20Link-Robustness%20Analysis-7928CA?style=for-the-badge)](https://lunarnavi.onrender.com/#robustness)
+
 [![Tests](https://img.shields.io/badge/tests-228%20passed%20(100%25)-success?style=flat-square)](file:///tests/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue?style=flat-square)](file:///package.json)
 [![React](https://img.shields.io/badge/React-19.0-61dafb?style=flat-square)](file:///package.json)
@@ -35,7 +40,7 @@ The platform automatically computes both a **Primary Landing Site** and a scient
 13. [Database Architecture (Supabase)](#-database-architecture-supabase)
 14. [Setup and Local Installation](#-setup-and-local-installation)
 15. [Environment Variables](#-environment-variables)
-16. [Deployment Configuration](#-deployment-configuration)
+16. [Live Deployment & Configuration](#-live-deployment--configuration)
 17. [Scientific & Analytical Limitations](#-scientific--analytical-limitations)
 18. [Contributors](#-contributors)
 19. [Acknowledgements](#-acknowledgements)
@@ -501,9 +506,23 @@ To connect Supabase:
 
 ---
 
-## 🌐 Deployment Configuration
+## 🌐 Live Deployment & Configuration
 
-LunarNavi is configured for zero-configuration static site hosting on **Render** using [render.yaml](file:///render.yaml):
+### 🚀 Live Website: [https://lunarnavi.onrender.com](https://lunarnavi.onrender.com)
+
+The LunarNavi production build is deployed as a high-performance static application hosted on **Render** with edge CDN caching:
+
+| View / Feature | Direct URL | Description |
+|---|---|---|
+| **🏠 Overview & Landing** | [lunarnavi.onrender.com](https://lunarnavi.onrender.com) | Main landing page, 3D interactive lunar globe, and system highlights. |
+| **📊 Robustness Analysis** | [lunarnavi.onrender.com/#robustness](https://lunarnavi.onrender.com/#robustness) | Full educational and technical explanation of TOPSIS & Monte Carlo. |
+| **🎯 Results & Ranking** | [lunarnavi.onrender.com/#results](https://lunarnavi.onrender.com/#results) | Candidate site leaderboard, radar charts, and Primary/Backup cards. |
+| **⚙️ Mission Setup** | [lunarnavi.onrender.com/#setup](https://lunarnavi.onrender.com/#setup) | Mission profile selection, date scheduler, and criteria weight tuning. |
+| **🗺️ Cartographic Lunar Map**| [lunarnavi.onrender.com/#map](https://lunarnavi.onrender.com/#map) | 2D Canvas raster cartography with false-color DEM, slope, and site pins. |
+| **🛰️ Data & Sources** | [lunarnavi.onrender.com/#data-sources](https://lunarnavi.onrender.com/#data-sources) | Authoritative NASA datasets, coverage indicators, and archive links. |
+
+### Render Blueprint Configuration
+The deployment lifecycle is managed via [render.yaml](file:///render.yaml):
 
 ```yaml
 services:
