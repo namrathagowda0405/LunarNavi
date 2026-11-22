@@ -39,6 +39,7 @@ build/Release
 
 # Dependency directories
 node_modules/
+node_modules
 jspm_packages/
 
 # Snowpack dependency directory (https://snowpack.dev/)
@@ -155,3 +156,13 @@ vite.config.ts.timestamp-*
 .nx/cache
 .nx/workspace-data
 .nx/migrate-runs
+
+# Raw Geospatial / NASA Data Downloads
+data/raw/
+*.JP2
+*.jp2
+*.TIF
+*.tif
+*.LBL
+*.lbl
+
