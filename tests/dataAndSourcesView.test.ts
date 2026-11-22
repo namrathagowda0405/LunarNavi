@@ -5,20 +5,31 @@ import { fileURLToPath } from 'url'
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url))
 
-describe('Data & Sources View - Simplified & Authoritative', () => {
+describe('Data & Sources View - Clean, Minimal & Hackathon Judge Ready', () => {
   const dataSourcesFile = path.join(currentDir, '../src/frontend/views/DataAndSources.tsx')
   const content = fs.readFileSync(dataSourcesFile, 'utf-8')
 
-  it('contains Section A: Key Data Sources with 1-sentence purposes and direct archive links', () => {
-    expect(content).toContain('Key Scientific Data Sources')
+  it('contains exactly one brief introduction sentence explaining lunar scientific datasets', () => {
+    expect(content).toContain('LunarNavi uses lunar scientific datasets to evaluate candidate landing sites.')
+  })
+
+  it('contains only genuine scientific data sources with 1-sentence data descriptions and direct archive links', () => {
+    // 6 genuine sources
     expect(content).toContain('Lunar Orbiter Laser Altimeter (LOLA)')
-    expect(content).toContain('A New View of the Lunar South Pole (PGDA Product 90)')
-    expect(content).toContain('Illumination Conditions of Lunar Polar Regions (PGDA Product 69)')
+    expect(content).toContain('LOLA 50m Slope & Roughness (PGDA Product 90)')
+    expect(content).toContain('Polar Illumination & Earth Visibility (PGDA Product 69)')
     expect(content).toContain('Lunar Exploration Neutron Detector (LEND) & LCROSS')
     expect(content).toContain('Diviner Lunar Radiometer Experiment')
     expect(content).toContain('NASA Artemis III Science Definition Team Report')
 
-    // Direct archive links
+    // Organizations
+    expect(content).toContain('NASA Planetary Data System (PDS) / GSFC')
+    expect(content).toContain('NASA Planetary Geodynamics Data Archive / GSFC')
+    expect(content).toContain('NASA PDS Geosciences / LCROSS')
+    expect(content).toContain('NASA / UCLA')
+    expect(content).toContain('NASA Science Mission Directorate')
+
+    // Direct archive URLs
     expect(content).toContain('https://pds-geosciences.wustl.edu/missions/lro/lola.htm')
     expect(content).toContain('https://pgda.gsfc.nasa.gov/products/90')
     expect(content).toContain('https://pgda.gsfc.nasa.gov/products/69')
@@ -26,42 +37,22 @@ describe('Data & Sources View - Simplified & Authoritative', () => {
     expect(content).toContain('https://diviner.ucla.edu/')
     expect(content).toContain('https://www.nasa.gov/news-release/nasa-identifies-candidate-regions-for-artemis-iii-lunar-landing/')
 
-    // Target blank and security attributes
+    // Secure target attributes
     expect(content).toContain('target="_blank"')
     expect(content).toContain('rel="noopener noreferrer"')
   })
 
-  it('contains Section B: Data Used in Site Evaluation with genuine categories only', () => {
-    expect(content).toContain('Data Categories Used in Site Evaluation')
-    expect(content).toContain('Terrain & Elevation')
-    expect(content).toContain('Surface Slope')
-    expect(content).toContain('Terrain Roughness')
-    expect(content).toContain('Solar Illumination')
-    expect(content).toContain('Water-Ice & Resource Evidence')
-    expect(content).toContain('Communication Visibility')
-    expect(content).toContain('Scientific Return Value')
-  })
-
-  it('contains Section C: Data Quality & Verification with the four truthful statuses', () => {
-    expect(content).toContain('Data Quality & Verification Statuses')
-    expect(content).toContain('Verified / source-backed')
+  it('includes simple, truthful coverage statuses reflecting the actual pipeline', () => {
+    expect(content).toContain('Verified / available')
     expect(content).toContain('Derived from source data')
-    expect(content).toContain('Estimated')
-    expect(content).toContain('Unavailable')
-    expect(content).toContain('No-Fabrication Policy')
+    expect(content).toContain('Unavailable / insufficient')
   })
 
-  it('contains Section D: Scientific Transparency statement and prototype disclaimer', () => {
-    expect(content).toContain('Scientific Transparency & Mission Evaluation Boundary')
-    expect(content).toContain('LunarNavi is a decision-support prototype designed for preliminary landing-site trade studies.')
-    expect(content).toContain('landing safety certification')
-    expect(content).toContain('All candidate evaluations, feasibility determinations, and multi-criteria rankings depend strictly on available scientific data')
-    expect(content).toContain('users can independently verify all measurements')
-  })
-
-  it('does not contain fake confidence percentages, invented quality scores, or excessive catalogs', () => {
+  it('does not contain redundant tables, sidebars, heavy breakdowns, or fake confidence metrics', () => {
     expect(content).not.toContain('99.8% Data Accuracy')
     expect(content).not.toContain('Overall Data Reliability: 94%')
     expect(content).not.toContain('100% Quality Score')
+    expect(content).not.toContain('Data Categories Used in Site Evaluation') // Removed heavy secondary table
+    expect(content).not.toContain('Data Quality & Verification Statuses') // Removed heavy secondary cards
   })
 })
