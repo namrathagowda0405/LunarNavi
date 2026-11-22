@@ -557,4 +557,153 @@ describe('runMonteCarlo', () => {
     expect(elapsed).toBeLessThan(10000)
     expect(result.sites.length).toBe(12)
   })
+
+  it('Top-2 frequency and average rank: mathematically verified on deterministic 3-site benchmark', () => {
+    // 3 sites with fixed deterministic values
+    const siteA = makeTestSite('Site-Top', {
+      slope: { value: 3, low: 3, high: 3 },
+      roughness: { value: 1, low: 1, high: 1 },
+      illumination: { value: 95, low: 95, high: 95 },
+      resource: { value: 90, low: 90, high: 90 },
+      communication: { value: 95, low: 95, high: 95 },
+      science: { value: 95, low: 95, high: 95 },
+    })
+    const siteB = makeTestSite('Site-Mid', {
+      slope: { value: 6, low: 6, high: 6 },
+      roughness: { value: 2, low: 2, high: 2 },
+      illumination: { value: 70, low: 70, high: 70 },
+      resource: { value: 65, low: 65, high: 65 },
+      communication: { value: 75, low: 75, high: 75 },
+      science: { value: 70, low: 70, high: 70 },
+    })
+    const siteC = makeTestSite('Site-Low', {
+      slope: { value: 12, low: 12, high: 12 },
+      roughness: { value: 4, low: 4, high: 4 },
+      illumination: { value: 30, low: 30, high: 30 },
+      resource: { value: 25, low: 25, high: 25 },
+      communication: { value: 40, low: 40, high: 40 },
+      science: { value: 35, low: 35, high: 35 },
+    })
+
+    const mission = makeTestMission()
+    const iterations = 200
+    const res = runMonteCarlo([siteA, siteB, siteC], mission, {
+      seed: 42,
+      iterations,
+      weightRelativeSpread: 0, // Deterministic ranking: A=1, B=2, C=3 in every iteration
+    })
+
+    const sumA = res.sites.find((s) => s.siteId === 'Site-Top')!
+    const sumB = res.sites.find((s) => s.siteId === 'Site-Mid')!
+    const sumC = res.sites.find((s) => s.siteId === 'Site-Low')!
+
+    // Rank-1 frequencies
+    expect(sumA.winFrequency).toBe(1.0)
+    expect(sumB.winFrequency).toBe(0.0)
+    expect(sumC.winFrequency).toBe(0.0)
+
+    // Top-2 frequencies: P_i(Top 2) = (count(rank 1) + count(rank 2)) / N
+    const top2A = (sumA.rankCounts[0] + sumA.rankCounts[1]) / iterations
+    const top2B = (sumB.rankCounts[0] + sumB.rankCounts[1]) / iterations
+    const top2C = (sumC.rankCounts[0] + sumC.rankCounts[1]) / iterations
+
+    expect(top2A).toBe(1.0)
+    expect(top2B).toBe(1.0)
+    expect(top2C).toBe(0.0)
+
+    // Average rank: MeanRank_i = sum_k(Rank_i,k) / N
+    const avgRankA = sumA.rankCounts.reduce((acc, c, idx) => acc + c * (idx + 1), 0) / iterations
+    const avgRankB = sumB.rankCounts.reduce((acc, c, idx) => acc + c * (idx + 1), 0) / iterations
+    const avgRankC = sumC.rankCounts.reduce((acc, c, idx) => acc + c * (idx + 1), 0) / iterations
+
+    expect(avgRankA).toBe(1.0)
+    expect(avgRankB).toBe(2.0)
+    expect(avgRankC).toBe(3.0)
+  })
+
+  it('simulation actually reruns TOPSIS and responds dynamically to mission input changes', () => {
+    // Site Science: exceptional science return, lower resources
+    const siteScience = makeTestSite('Site-Sci', {
+      slope: { value: 5, low: 5, high: 5 },
+      roughness: { value: 1, low: 1, high: 1 },
+      illumination: { value: 70, low: 70, high: 70 },
+      resource: { value: 30, low: 30, high: 30 },
+      communication: { value: 70, low: 70, high: 70 },
+      science: { value: 98, low: 98, high: 98 },
+    })
+
+    // Site Resource: exceptional resource potential, lower science
+    const siteResource = makeTestSite('Site-Res', {
+      slope: { value: 5, low: 5, high: 5 },
+      roughness: { value: 1, low: 1, high: 1 },
+      illumination: { value: 70, low: 70, high: 70 },
+      resource: { value: 98, low: 98, high: 98 },
+      communication: { value: 70, low: 70, high: 70 },
+      science: { value: 30, low: 30, high: 30 },
+    })
+
+    // Mission 1: Science-weighted (science: 0.7, resource: 0.1, others: 0.05)
+    const missionSci = makeTestMission({
+      science: 0.7,
+      resource: 0.1,
+      slope: 0.05,
+      roughness: 0.05,
+      illumination: 0.05,
+      communication: 0.05,
+    })
+
+    // Mission 2: Resource-weighted (resource: 0.7, science: 0.1, others: 0.05)
+    const missionRes = makeTestMission({
+      resource: 0.7,
+      science: 0.1,
+      slope: 0.05,
+      roughness: 0.05,
+      illumination: 0.05,
+      communication: 0.05,
+    })
+
+    const resSci = runMonteCarlo([siteScience, siteResource], missionSci, {
+      seed: 42,
+      iterations: 200,
+      weightRelativeSpread: 0.2,
+    })
+    const resRes = runMonteCarlo([siteScience, siteResource], missionRes, {
+      seed: 42,
+      iterations: 200,
+      weightRelativeSpread: 0.2,
+    })
+
+    const winSciUnderMissionSci = resSci.sites.find((s) => s.siteId === 'Site-Sci')!.winFrequency
+    const winResUnderMissionRes = resRes.sites.find((s) => s.siteId === 'Site-Res')!.winFrequency
+
+    // Changing mission inputs dynamically reverses the dominant winner
+    expect(winSciUnderMissionSci).toBeGreaterThanOrEqual(0.95)
+    expect(winResUnderMissionRes).toBeGreaterThanOrEqual(0.95)
+  })
+
+  it('weight validity across 500 successive iterations: all weights >= 0, finite, and sum strictly to 1.0', () => {
+    const rng = createRng(9999)
+    const baseWeights: Record<CriterionId, number> = {
+      slope: 0.25,
+      roughness: 0.15,
+      illumination: 0.20,
+      resource: 0.10,
+      communication: 0.20,
+      science: 0.10,
+    }
+
+    for (let i = 0; i < 500; i++) {
+      const perturbed = perturbWeights(rng, baseWeights, 0.25)
+      let sum = 0
+
+      for (const cid of Object.keys(perturbed) as CriterionId[]) {
+        const w = perturbed[cid]
+        expect(Number.isFinite(w)).toBe(true)
+        expect(w).toBeGreaterThanOrEqual(0)
+        sum += w
+      }
+
+      expect(sum).toBeCloseTo(1.0, 9)
+    }
+  })
 })

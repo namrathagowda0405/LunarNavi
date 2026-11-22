@@ -53,6 +53,11 @@ export function RobustnessAnalysis({
     return rankSites(feasibleSites, currentMission)
   }, [feasibleSites, currentMission])
 
+  const rankingEligibleSites = useMemo(() => {
+    const excludedIds = new Set(nominalRanking.excluded.map((e) => e.siteId))
+    return feasibleSites.filter((s) => !excludedIds.has(s.id))
+  }, [feasibleSites, nominalRanking.excluded])
+
   const nominalScoreMap = useMemo(() => {
     const map = new Map<string, TopsisScore>()
     for (const score of nominalRanking.ranking) {
@@ -63,9 +68,9 @@ export function RobustnessAnalysis({
 
   // 3. Live Monte Carlo Simulation across iterations
   const mcResult: MonteCarloResult | null = useMemo(() => {
-    if (feasibleSites.length === 0) return null
+    if (rankingEligibleSites.length === 0) return null
     try {
-      return runMonteCarlo(feasibleSites, currentMission, {
+      return runMonteCarlo(rankingEligibleSites, currentMission, {
         seed,
         iterations,
         weightRelativeSpread,
@@ -74,7 +79,7 @@ export function RobustnessAnalysis({
       console.error('Monte Carlo simulation failed:', err)
       return null
     }
-  }, [feasibleSites, currentMission, seed, iterations, weightRelativeSpread])
+  }, [rankingEligibleSites, currentMission, seed, iterations, weightRelativeSpread])
 
   // Process and sort sites by Monte Carlo Win Frequency
   const sortedStats = useMemo(() => {

@@ -117,12 +117,16 @@ export function topsis(
     }
   }
 
-  // Step b: Multiply each column by its weight (use weights as given, do NOT rescale)
+  // Step b: Normalize weights so sum(w_j) = 1.0, then multiply each column by its weight
+  const weightSum = weights.reduce((acc, w) => acc + w, 0)
+  const normWeights =
+    Math.abs(weightSum - 1.0) < 1e-9 ? weights : weights.map((w) => w / weightSum)
+
   const weightedMatrix: number[][] = Array.from({ length: numRows }, () => new Array(numCols).fill(0))
 
   for (let i = 0; i < numRows; i++) {
     for (let j = 0; j < numCols; j++) {
-      weightedMatrix[i][j] = normMatrix[i][j] * weights[j]
+      weightedMatrix[i][j] = normMatrix[i][j] * normWeights[j]
     }
   }
 
@@ -214,6 +218,7 @@ export function topsis(
 export interface SiteRankingResult {
   ranking: TopsisScore[]
   criteriaUsed: CriterionId[]
+  weightsUsed: number[]
   excluded: { siteId: string; reason: string }[]
   ideal: number[]
   antiIdeal: number[]
@@ -240,6 +245,7 @@ export function rankSites(sites: Site[], mission: MissionProfile): SiteRankingRe
     return {
       ranking: [],
       criteriaUsed,
+      weightsUsed: [],
       excluded: [],
       ideal: [],
       antiIdeal: [],
@@ -274,6 +280,7 @@ export function rankSites(sites: Site[], mission: MissionProfile): SiteRankingRe
     return {
       ranking: [],
       criteriaUsed,
+      weightsUsed: [],
       excluded,
       ideal: [],
       antiIdeal: [],
@@ -281,7 +288,12 @@ export function rankSites(sites: Site[], mission: MissionProfile): SiteRankingRe
   }
 
   const ids = eligibleSites.map((s) => s.id)
-  const weights = criteriaUsed.map((cid) => mission.weights[cid])
+  const rawWeights = criteriaUsed.map((cid) => mission.weights[cid] ?? 0)
+  const weightSum = rawWeights.reduce((acc, w) => acc + w, 0)
+  const weights =
+    weightSum > 0 && Math.abs(weightSum - 1.0) >= 1e-9
+      ? rawWeights.map((w) => w / weightSum)
+      : rawWeights
   const directions = criteriaUsed.map((cid) => CRITERION_DIRECTION[cid])
   const matrix = eligibleSites.map((s) =>
     criteriaUsed.map((cid) => s.criteria[cid].value as number)
@@ -292,6 +304,7 @@ export function rankSites(sites: Site[], mission: MissionProfile): SiteRankingRe
   return {
     ranking: topsisResult.ranking,
     criteriaUsed,
+    weightsUsed: weights,
     excluded,
     ideal: topsisResult.ideal,
     antiIdeal: topsisResult.antiIdeal,

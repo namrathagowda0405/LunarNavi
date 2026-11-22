@@ -395,4 +395,85 @@ describe('rankSites wrapper', () => {
     expect(order1.ranking.map((s) => s.closeness)).toEqual(order2.ranking.map((s) => s.closeness))
     expect(order1.ranking.map((s) => s.closeness)).toEqual(order3.ranking.map((s) => s.closeness))
   })
+
+  it('weight normalization: unnormalized weights produce identical ranking and closeness to normalized weights', () => {
+    const ids = ['Site-A', 'Site-B', 'Site-C']
+    const matrix = [
+      [3, 2],
+      [4, 3],
+      [12, 6],
+    ]
+    const directions: CriterionDirection[] = ['benefit', 'cost']
+
+    // Normalized weights [0.5, 0.5] vs Unnormalized weights [50, 50] or [2, 2]
+    const normResult = topsis(ids, matrix, [0.5, 0.5], directions)
+    const scaledResult = topsis(ids, matrix, [50, 50], directions)
+
+    expect(scaledResult.ranking.map((s) => s.id)).toEqual(normResult.ranking.map((s) => s.id))
+    expect(scaledResult.ranking.map((s) => s.rank)).toEqual(normResult.ranking.map((s) => s.rank))
+    for (let i = 0; i < ids.length; i++) {
+      expect(scaledResult.ranking[i].closeness).toBeCloseTo(normResult.ranking[i].closeness, 9)
+    }
+  })
+
+  it('multi-criteria test: 4 alternatives x 3 criteria (mixed 2 benefit, 1 cost) with expected relative ordering', () => {
+    // 4 alternatives: A, B, C, D
+    // Criteria: C1 (benefit, weight 0.4), C2 (benefit, weight 0.3), C3 (cost, weight 0.3)
+    const ids = ['Alt-A', 'Alt-B', 'Alt-C', 'Alt-D']
+    const matrix = [
+      [80, 70, 5],  // Good benefit, low cost -> Strong contender
+      [90, 85, 12], // Very high benefit, but higher cost
+      [50, 40, 4],  // Low benefit, lowest cost
+      [40, 30, 15], // Low benefit, high cost -> Clear worst
+    ]
+    const weights = [0.4, 0.3, 0.3]
+    const directions: CriterionDirection[] = ['benefit', 'benefit', 'cost']
+
+    const res = topsis(ids, matrix, weights, directions)
+
+    // Clear worst should be Alt-D (rank 4)
+    expect(res.ranking[3].id).toBe('Alt-D')
+    expect(res.ranking[3].rank).toBe(4)
+
+    // Alt-A and Alt-B are the top two
+    const topTwo = [res.ranking[0].id, res.ranking[1].id]
+    expect(topTwo).toContain('Alt-A')
+    expect(topTwo).toContain('Alt-B')
+
+    // All closeness values in [0, 1]
+    for (const item of res.ranking) {
+      expect(item.closeness).toBeGreaterThanOrEqual(0)
+      expect(item.closeness).toBeLessThanOrEqual(1)
+    }
+  })
+
+  it('rankSites returns weightsUsed that sum strictly to 1.0 even when partial weights provided', () => {
+    const siteA = makeTestSite('site-1', {
+      slope: 5.0,
+      roughness: 0.15,
+      illumination: 0.8,
+      resource: 0.5,
+      communication: 0.7,
+      science: 8.0,
+    })
+    const siteB = makeTestSite('site-2', {
+      slope: 8.0,
+      roughness: 0.2,
+      illumination: 0.7,
+      resource: 0.6,
+      communication: 0.8,
+      science: 7.0,
+    })
+
+    // Mission weights only slope (0.3) and science (0.3) - total 0.6
+    const mission = makeTestMission({ slope: 0.3, science: 0.3 })
+    const result = rankSites([siteA, siteB], mission)
+
+    expect(result.criteriaUsed).toEqual(['slope', 'science'])
+    expect(result.weightsUsed).toHaveLength(2)
+    const sum = result.weightsUsed.reduce((acc, w) => acc + w, 0)
+    expect(sum).toBeCloseTo(1.0, 9)
+    expect(result.weightsUsed[0]).toBeCloseTo(0.5, 9)
+    expect(result.weightsUsed[1]).toBeCloseTo(0.5, 9)
+  })
 })

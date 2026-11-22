@@ -108,11 +108,17 @@ export function Results({
     return rankSites(feasibleSites, activeMission)
   }, [feasibleSites, activeMission])
 
-  // 3. Monte Carlo Robustness Analysis on feasible sites (500 stochastic trials, seed 42)
+  // Admitted candidates for ranking and stochastic analysis (passed physical limits AND complete data for weighted criteria)
+  const rankingEligibleSites = useMemo(() => {
+    const excludedIds = new Set(rankingResult.excluded.map((e) => e.siteId))
+    return feasibleSites.filter((s) => !excludedIds.has(s.id))
+  }, [feasibleSites, rankingResult.excluded])
+
+  // 3. Monte Carlo Robustness Analysis on ranking-eligible candidates (500 stochastic trials, seed 42)
   const monteCarloResult: MonteCarloResult | null = useMemo(() => {
-    if (feasibleSites.length === 0) return null
+    if (rankingEligibleSites.length === 0) return null
     try {
-      return runMonteCarlo(feasibleSites, activeMission, {
+      return runMonteCarlo(rankingEligibleSites, activeMission, {
         seed: 42,
         iterations: 500,
         weightRelativeSpread: 0.15,
@@ -121,7 +127,7 @@ export function Results({
       console.warn('Monte Carlo computation warning:', err)
       return null
     }
-  }, [feasibleSites, activeMission])
+  }, [rankingEligibleSites, activeMission])
 
   // Fast Monte Carlo stats lookup
   const mcStatsMap = useMemo(() => {
@@ -144,7 +150,7 @@ export function Results({
     if (!monteCarloResult) return []
     const total = monteCarloResult.iterations || 500
 
-    return feasibleSites
+    return rankingEligibleSites
       .map((site) => {
         const summary = monteCarloResult.sites.find((s) => s.siteId === site.id)
         const nominalScore = rankingResult.ranking.find((r) => r.id === site.id)
@@ -195,7 +201,7 @@ export function Results({
         }
       })
       .sort((a, b) => a.nominalRank - b.nominalRank)
-  }, [monteCarloResult, feasibleSites, rankingResult.ranking])
+  }, [monteCarloResult, rankingEligibleSites, rankingResult.ranking])
 
   // Fast site lookup
   const siteMap = useMemo(() => {
@@ -283,8 +289,8 @@ export function Results({
       const label = CRITERION_LABELS[cid]
       const unit = CRITERION_UNITS[cid]
 
-      // Check all feasible candidates for best-in-class
-      const allVals = feasibleSites
+      // Check all ranking-eligible candidates for best-in-class
+      const allVals = rankingEligibleSites
         .map((s) => s.criteria[cid]?.value)
         .filter((v): v is number => typeof v === 'number')
 
@@ -357,7 +363,7 @@ export function Results({
     tradeOffs.sort((a, b) => b.weightPct - a.weightPct)
 
     return { advantages, tradeOffs, runnerUpSite, runnerUpScore, leadMarginPct }
-  }, [topSite, rankingResult, feasibleSites, activeMission, siteMap])
+  }, [topSite, rankingResult, rankingEligibleSites, activeMission, siteMap])
 
   // Automatically log/persist analysis run to Supabase (or session ledger fallback)
   useEffect(() => {
@@ -480,21 +486,23 @@ export function Results({
         </div>
 
         <div className="stat-filter-card stat-filter-card--feasible">
-          <div className="stat-filter-label">FEASIBLE CANDIDATES</div>
-          <div className="stat-filter-value font-mono text-teal">{feasibleSites.length}</div>
-          <div className="stat-filter-sub">Admitted to TOPSIS ranking matrix</div>
+          <div className="stat-filter-label">ADMITTED TO RANKING</div>
+          <div className="stat-filter-value font-mono text-teal">{rankingResult.ranking.length}</div>
+          <div className="stat-filter-sub">Passed physical limits & criteria data complete</div>
         </div>
 
         <div className="stat-filter-card stat-filter-card--infeasible">
-          <div className="stat-filter-label">INFEASIBLE FILTERED</div>
+          <div className="stat-filter-label">DISQUALIFIED (INFEASIBLE)</div>
           <div className="stat-filter-value font-mono text-red">{feasibilitySummary.infeasibleCount}</div>
-          <div className="stat-filter-sub">Failed essential slope/rough/solar limits</div>
+          <div className="stat-filter-sub">Failed essential slope/roughness limits</div>
         </div>
 
         <div className="stat-filter-card stat-filter-card--unknown">
-          <div className="stat-filter-label">UNKNOWN / DATA GAP</div>
-          <div className="stat-filter-value font-mono text-yellow">{feasibilitySummary.unknownCount}</div>
-          <div className="stat-filter-sub">Missing critical telemetry · Safety unverified</div>
+          <div className="stat-filter-label">DATA GAPS & EXCLUDED</div>
+          <div className="stat-filter-value font-mono text-yellow">
+            {feasibilitySummary.unknownCount + rankingResult.excluded.length}
+          </div>
+          <div className="stat-filter-sub">Missing essential telemetry or unassessed metrics</div>
         </div>
       </div>
 
@@ -1669,14 +1677,36 @@ export function Results({
         <div className="panel-header">
           <span className="panel-tag">EXCLUSION AUDIT</span>
           <h2 id="heading-disqualified" className="panel-title">
-            Filtered & Excluded Sites ({feasibilitySummary.infeasibleCount + feasibilitySummary.unknownCount})
+            Filtered & Excluded Sites ({feasibilitySummary.infeasibleCount + feasibilitySummary.unknownCount + rankingResult.excluded.length})
           </h2>
           <p className="panel-subtitle">
-            Sites disqualified by the Feasibility Filter prior to TOPSIS ranking, with documented physical constraint violations and data transparency disclosures.
+            Sites disqualified by the Feasibility Filter or excluded from TOPSIS ranking due to unassessed telemetry gaps, with full scientific transparency disclosures.
           </p>
         </div>
 
         <div className="excluded-sites-list">
+          {/* 1. Sites excluded from ranking due to data gaps in active weighted criteria */}
+          {rankingResult.excluded.map((ex) => {
+            const site = siteMap.get(ex.siteId)
+            return (
+              <div key={ex.siteId} className="excluded-site-item excluded-site-item--unknown">
+                <div className="excluded-site-header">
+                  <div>
+                    <strong className="excluded-site-name">{site?.name ?? ex.siteId}</strong>
+                    {site?.region && <span className="excluded-site-region"> ({site.region})</span>}
+                  </div>
+                  <span className="feasibility-badge feasibility-badge--unknown">
+                    ⚠️ EXCLUDED FROM RANKING (DATA GAP)
+                  </span>
+                </div>
+                <ul className="excluded-site-reasons">
+                  <li>{ex.reason}</li>
+                </ul>
+              </div>
+            )
+          })}
+
+          {/* 2. Infeasible candidates failing physical engineering constraints */}
           {feasibilitySummary.infeasible.map(({ site, result }) => (
             <div key={site.id} className="excluded-site-item excluded-site-item--infeasible">
               <div className="excluded-site-header">
@@ -1696,6 +1726,7 @@ export function Results({
             </div>
           ))}
 
+          {/* 3. Unknown candidates with missing essential safety telemetry */}
           {feasibilitySummary.unknown.map(({ site, result }) => (
             <div key={site.id} className="excluded-site-item excluded-site-item--unknown">
               <div className="excluded-site-header">
