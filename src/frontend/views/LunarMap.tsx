@@ -19,6 +19,7 @@ import {
   CENTRALIZED_CANDIDATE_SITES,
   CentralizedSite,
   getSiteById,
+  getDecorrelatedBackupSite,
 } from '../../data/candidateSites'
 import { MissionFormState } from '../missionForm'
 
@@ -27,6 +28,7 @@ interface LunarMapProps {
   activeMission?: MissionProfile | null
   formState?: MissionFormState
   onNavigate?: (view: ViewId) => void
+  targetSiteId?: string | null
 }
 
 interface MetricsGridData {
@@ -43,6 +45,7 @@ export function LunarMap({
   activeMission: propActiveMission,
   formState,
   onNavigate,
+  targetSiteId,
 }: LunarMapProps) {
   // Navigation & Zoom State
   const [zoom, setZoom] = useState<number>(1.0)
@@ -116,6 +119,19 @@ export function LunarMap({
     })
     return map
   }, [rankingResult])
+
+  const primarySiteId = rankingResult.ranking[0]?.id
+  const primarySite: CentralizedSite | undefined = useMemo(() => {
+    return primarySiteId ? getSiteById(primarySiteId) : undefined
+  }, [primarySiteId])
+
+  const backupSite: CentralizedSite | undefined = useMemo(() => {
+    if (!primarySiteId) return undefined
+    return getDecorrelatedBackupSite(
+      primarySiteId,
+      rankingResult.ranking.map((r) => r.id)
+    )
+  }, [primarySiteId, rankingResult.ranking])
 
   // Load lightweight 380x380 telemetry grid on mount for instant client-side telemetry
   useEffect(() => {
@@ -316,6 +332,16 @@ export function LunarMap({
     setPan({ x: -offsetX, y: -offsetY })
   }, [])
 
+  // Auto-focus on targetSiteId when navigated with a specific candidate site
+  useEffect(() => {
+    if (targetSiteId) {
+      const site = CENTRALIZED_CANDIDATE_SITES.find((s) => s.id === targetSiteId)
+      if (site) {
+        centerOnSite(site)
+      }
+    }
+  }, [targetSiteId, centerOnSite])
+
   // Focus map view to center a specific landmark
   const centerOnLandmark = useCallback((landmark: LunarLandmark) => {
     setSelectedLandmark(landmark)
@@ -398,22 +424,28 @@ export function LunarMap({
               Sites display live physical feasibility status and TOPSIS ranking under this profile.
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             {onNavigate && (
               <>
+                <button
+                  type="button"
+                  className="btn btn--primary btn--small"
+                  style={{
+                    backgroundColor: '#22c55e',
+                    borderColor: '#22c55e',
+                    color: '#0f172a',
+                    fontWeight: 700,
+                  }}
+                  onClick={() => onNavigate('results')}
+                >
+                  ← Return to Results & Ranking
+                </button>
                 <button
                   type="button"
                   className="btn btn--secondary btn--small"
                   onClick={() => onNavigate('setup')}
                 >
                   Adjust in Setup
-                </button>
-                <button
-                  type="button"
-                  className="btn btn--secondary btn--small"
-                  onClick={() => onNavigate('results')}
-                >
-                  View TOPSIS Results →
                 </button>
               </>
             )}
@@ -587,16 +619,40 @@ export function LunarMap({
                   {CENTRALIZED_CANDIDATE_SITES.map((site) => {
                     const { u, v } = latLonToNormalized(site.latitude, site.longitude)
                     const isSelected = selectedSite?.id === site.id
-                    const isArtemis = site.designation === 'official-artemis-candidate'
+                    const isPrimary = primarySite?.id === site.id
+                    const isBackup = backupSite?.id === site.id
                     const feasibility = feasibilityMap.get(site.id)
                     const ranking = rankingMap.get(site.id)
 
-                    // Halos based on feasibility category
-                    let statusHaloColor = '#3b82f6'
-                    if (feasibility) {
-                      if (feasibility.category === 'feasible') statusHaloColor = '#22c55e'
-                      else if (feasibility.category === 'infeasible') statusHaloColor = '#ef4444'
-                      else if (feasibility.category === 'unknown') statusHaloColor = '#fbbf24'
+                    // Pin Styling as requested:
+                    // Primary: Green (#22c55e), Backup: Orange (#f97316), Others: Neutral Slate (#64748b)
+                    let pinBgColor = '#64748b'
+                    let pinBorderColor = '#334155'
+                    let pinShadow = '0 0 6px rgba(100, 116, 139, 0.7)'
+                    let zIndex = 12
+
+                    if (isPrimary) {
+                      pinBgColor = '#22c55e'
+                      pinBorderColor = isSelected ? '#fbbf24' : '#86efac'
+                      pinShadow = isSelected
+                        ? '0 0 16px #fbbf24, 0 0 24px rgba(34, 197, 94, 0.9)'
+                        : '0 0 12px rgba(34, 197, 94, 0.95), 0 0 20px rgba(34, 197, 94, 0.5)'
+                      zIndex = 26
+                    } else if (isBackup) {
+                      pinBgColor = '#f97316'
+                      pinBorderColor = isSelected ? '#fbbf24' : '#fdba74'
+                      pinShadow = isSelected
+                        ? '0 0 16px #fbbf24, 0 0 24px rgba(249, 115, 22, 0.9)'
+                        : '0 0 12px rgba(249, 115, 22, 0.95), 0 0 20px rgba(249, 115, 22, 0.5)'
+                      zIndex = 24
+                    } else if (isSelected) {
+                      pinBorderColor = '#fbbf24'
+                      pinShadow = '0 0 12px #fbbf24'
+                      zIndex = 20
+                    } else if (feasibility?.category === 'infeasible') {
+                      pinBorderColor = '#ef4444'
+                    } else if (feasibility?.category === 'feasible') {
+                      pinBorderColor = '#94a3b8'
                     }
 
                     return (
@@ -607,32 +663,66 @@ export function LunarMap({
                         style={{
                           left: `${u * 100}%`,
                           top: `${v * 100}%`,
+                          zIndex,
                         }}
                         onClick={(e) => {
                           e.stopPropagation()
                           setSelectedSite(site)
                           setSelectedLandmark(null)
                         }}
-                        title={`${site.name} (${site.latitude.toFixed(2)}°S, ${site.longitude.toFixed(1)}°E) — ${feasibility?.status ?? 'Unassessed'}`}
+                        title={`${site.name} (${site.latitude.toFixed(2)}°S, ${site.longitude.toFixed(1)}°E) — ${isPrimary ? 'PRIMARY #1' : isBackup ? `BACKUP #${ranking?.rank ?? 2}` : feasibility?.status ?? 'Candidate Site'}`}
                       >
                         <div
                           className="landmark-pin-icon"
                           style={{
-                            backgroundColor: isArtemis ? '#38bdf8' : '#a855f7',
-                            borderColor: isSelected ? '#fbbf24' : statusHaloColor,
-                            boxShadow: isSelected
-                              ? '0 0 12px #fbbf24, 0 0 20px rgba(251, 191, 36, 0.6)'
-                              : `0 0 6px ${statusHaloColor}`,
+                            backgroundColor: pinBgColor,
+                            borderColor: pinBorderColor,
+                            boxShadow: pinShadow,
+                            transform: isPrimary || isBackup ? 'scale(1.2)' : undefined,
                           }}
                         />
-                        <span className="landmark-pin-label">
-                          {ranking && ranking.rank <= 3 && (
-                            <strong style={{ color: '#fbbf24', marginRight: '3px' }}>
-                              #{ranking.rank}
+                        {isPrimary ? (
+                          <span
+                            className="landmark-pin-label"
+                            style={{
+                              borderColor: '#22c55e',
+                              backgroundColor: 'rgba(5, 46, 22, 0.95)',
+                              color: '#86efac',
+                              fontWeight: 700,
+                              opacity: 1,
+                              boxShadow: '0 0 10px rgba(34, 197, 94, 0.4)',
+                            }}
+                          >
+                            <strong style={{ color: '#22c55e', marginRight: '4px' }}>[PRIMARY #1]</strong>
+                            {site.name}
+                          </span>
+                        ) : isBackup ? (
+                          <span
+                            className="landmark-pin-label"
+                            style={{
+                              borderColor: '#f97316',
+                              backgroundColor: 'rgba(67, 20, 7, 0.95)',
+                              color: '#fed7aa',
+                              fontWeight: 700,
+                              opacity: 1,
+                              boxShadow: '0 0 10px rgba(249, 115, 22, 0.4)',
+                            }}
+                          >
+                            <strong style={{ color: '#f97316', marginRight: '4px' }}>
+                              [BACKUP #{ranking ? ranking.rank : '2'}]
                             </strong>
-                          )}
-                          {site.name}
-                        </span>
+                            {site.name}
+                          </span>
+                        ) : (
+                          <span className="landmark-pin-label">
+                            {ranking && ranking.rank <= 5 && (
+                              <span style={{ color: '#94a3b8', marginRight: '3px', fontFamily: 'var(--font-mono)' }}>
+                                #{ranking.rank}
+                              </span>
+                            )}
+                            {site.name}
+                          </span>
+                        )}
                       </button>
                     )
                   })}
@@ -673,6 +763,131 @@ export function LunarMap({
                   })}
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Candidate Recommendation Classification Legend */}
+          <div
+            className="map-recommendation-legend"
+            style={{
+              position: 'absolute',
+              top: '12px',
+              left: '12px',
+              backgroundColor: 'rgba(11, 17, 32, 0.94)',
+              border: '1px solid var(--border-medium)',
+              borderRadius: '8px',
+              padding: '0.65rem 0.85rem',
+              backdropFilter: 'blur(8px)',
+              zIndex: 25,
+              fontSize: '0.75rem',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.6)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.45rem',
+              maxWidth: '320px',
+            }}
+            aria-label="Recommendation Distinction Legend"
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontWeight: 800, letterSpacing: '0.05em', color: 'var(--text-secondary)', fontSize: '0.675rem' }}>
+                MAP CLASSIFICATION
+              </span>
+              {onNavigate && (
+                <button
+                  type="button"
+                  className="btn btn--subtle btn--small"
+                  style={{ fontSize: '0.7rem', padding: '0.15rem 0.45rem', textDecoration: 'none' }}
+                  onClick={() => onNavigate('results')}
+                  title="Return to Landing Site Results & Rankings"
+                >
+                  ← Back to Results
+                </button>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  cursor: primarySite ? 'pointer' : 'default',
+                }}
+                onClick={() => primarySite && centerOnSite(primarySite)}
+                title={primarySite ? `Focus on Primary: ${primarySite.name}` : undefined}
+              >
+                <span
+                  style={{
+                    width: '11px',
+                    height: '11px',
+                    borderRadius: '50%',
+                    backgroundColor: '#22c55e',
+                    border: '2px solid #86efac',
+                    boxShadow: '0 0 8px #22c55e',
+                    flexShrink: 0,
+                  }}
+                />
+                <span style={{ color: '#86efac', fontWeight: 700 }}>
+                  Green: Primary Landing Site
+                </span>
+                {primarySite && (
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', marginLeft: 'auto', fontFamily: 'var(--font-mono)' }}>
+                    #{1} {primarySite.name}
+                  </span>
+                )}
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  cursor: backupSite ? 'pointer' : 'default',
+                }}
+                onClick={() => backupSite && centerOnSite(backupSite)}
+                title={backupSite ? `Focus on Backup: ${backupSite.name}` : undefined}
+              >
+                <span
+                  style={{
+                    width: '11px',
+                    height: '11px',
+                    borderRadius: '50%',
+                    backgroundColor: '#f97316',
+                    border: '2px solid #fdba74',
+                    boxShadow: '0 0 8px #f97316',
+                    flexShrink: 0,
+                  }}
+                />
+                <span style={{ color: '#fdba74', fontWeight: 700 }}>
+                  Orange: Backup Landing Site
+                </span>
+                {backupSite ? (
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', marginLeft: 'auto', fontFamily: 'var(--font-mono)' }}>
+                    #{rankingMap.get(backupSite.id)?.rank ?? 2} {backupSite.name}
+                  </span>
+                ) : (
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', marginLeft: 'auto' }}>
+                    (None feasible)
+                  </span>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span
+                  style={{
+                    width: '11px',
+                    height: '11px',
+                    borderRadius: '50%',
+                    backgroundColor: '#64748b',
+                    border: '2px solid #94a3b8',
+                    boxShadow: '0 0 4px #64748b',
+                    flexShrink: 0,
+                  }}
+                />
+                <span style={{ color: '#94a3b8' }}>
+                  Slate: Other Candidate Sites
+                </span>
+              </div>
             </div>
           </div>
 
@@ -876,6 +1091,38 @@ export function LunarMap({
               <div className="inspection-header">
                 <div>
                   <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.25rem', flexWrap: 'wrap' }}>
+                    {primarySite?.id === selectedSite.id && (
+                      <span
+                        style={{
+                          backgroundColor: 'rgba(34, 197, 94, 0.25)',
+                          border: '1px solid #22c55e',
+                          color: '#86efac',
+                          fontWeight: 800,
+                          fontSize: '0.675rem',
+                          padding: '0.15rem 0.45rem',
+                          borderRadius: '4px',
+                          fontFamily: 'var(--font-mono)',
+                        }}
+                      >
+                        ★ PRIMARY RECOMMENDATION (#1)
+                      </span>
+                    )}
+                    {backupSite?.id === selectedSite.id && (
+                      <span
+                        style={{
+                          backgroundColor: 'rgba(249, 115, 22, 0.25)',
+                          border: '1px solid #f97316',
+                          color: '#fed7aa',
+                          fontWeight: 800,
+                          fontSize: '0.675rem',
+                          padding: '0.15rem 0.45rem',
+                          borderRadius: '4px',
+                          fontFamily: 'var(--font-mono)',
+                        }}
+                      >
+                        ⛨ BACKUP RECOMMENDATION (RANK #{rankingMap.get(selectedSite.id)?.rank ?? 2})
+                      </span>
+                    )}
                     <span
                       className={`badge-designation ${
                         selectedSite.designation === 'official-artemis-candidate'
@@ -1062,14 +1309,24 @@ export function LunarMap({
                 </button>
 
                 {onNavigate && (
-                  <button
-                    type="button"
-                    className="btn btn--secondary btn--small"
-                    style={{ fontSize: '0.725rem' }}
-                    onClick={() => onNavigate('sites')}
-                  >
-                    Sites Table →
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      className="btn btn--secondary btn--small"
+                      style={{ fontSize: '0.725rem' }}
+                      onClick={() => onNavigate('results')}
+                    >
+                      Results & Ranking →
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn--subtle btn--small"
+                      style={{ fontSize: '0.725rem' }}
+                      onClick={() => onNavigate('sites')}
+                    >
+                      Sites Table →
+                    </button>
+                  </>
                 )}
               </div>
             </div>

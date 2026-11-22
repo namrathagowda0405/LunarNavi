@@ -51,6 +51,13 @@ export function MissionSetup({
   }
 
   // Handlers for Schedule & Duration
+  const handleLaunchDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onFormChange({
+      ...formState,
+      launchDate: e.target.value,
+    })
+  }
+
   const handleArrivalDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onFormChange({
       ...formState,
@@ -88,6 +95,7 @@ export function MissionSetup({
   }
 
   const currentDuration = formState.durationDays ?? DEFAULT_MISSION_DURATIONS[formState.missionType] ?? 14
+  const currentLaunch = formState.launchDate ?? '2027-05-27'
   const currentArrival = formState.arrivalDate ?? '2027-06-01'
 
   return (
@@ -329,30 +337,50 @@ export function MissionSetup({
       <section className="form-section panel" aria-labelledby="heading-schedule">
         <div className="panel-header">
           <span className="panel-tag">REQUIRED INPUT 2 & 3</span>
-          <h2 id="heading-schedule" className="panel-title">2. Arrival Schedule & Surface Duration</h2>
+          <h2 id="heading-schedule" className="panel-title">2. Mission Schedule & Surface Duration</h2>
           <p className="panel-subtitle">
-            Specify the operational timeline for lunar landing and surface operations.
+            Specify the operational timeline for lunar launch, landing, and surface operations.
           </p>
         </div>
 
-        <div className="mission-schedule-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+        <div className="mission-schedule-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem' }}>
+          {/* Planned Launch Date */}
+          <div className="form-group">
+            <label htmlFor="launch-date-input" className="form-label">
+              Planned Launch / Departure Date <span className="required-mark">*</span>
+            </label>
+            <input
+              type="date"
+              id="launch-date-input"
+              className="form-input font-mono"
+              min="2025-01-01"
+              max="2035-12-31"
+              value={currentLaunch}
+              onChange={handleLaunchDateChange}
+              required
+            />
+            <p className="form-hint">
+              Earth departure calendar date for translunar injection.
+            </p>
+          </div>
+
           {/* Planned Arrival Date */}
           <div className="form-group">
             <label htmlFor="arrival-date-input" className="form-label">
-              Expected Lunar Arrival Date <span className="required-mark">*</span>
+              Estimated Lunar Arrival Date <span className="required-mark">*</span>
             </label>
             <input
               type="date"
               id="arrival-date-input"
               className="form-input font-mono"
-              min="2025-01-01"
+              min={currentLaunch || '2025-01-01'}
               max="2035-12-31"
               value={currentArrival}
               onChange={handleArrivalDateChange}
               required
             />
             <p className="form-hint">
-              Target arrival calendar date for mission launch and transit planning.
+              Target arrival calendar date (must not precede launch date).
             </p>
           </div>
 
@@ -413,6 +441,7 @@ export function MissionSetup({
           <div className="notice-content">
             <strong>Scientific Modeling & Ephemeris Limitation Disclosure</strong>
             <p style={{ margin: '0.25rem 0 0.25rem 0', fontSize: '0.85rem', lineHeight: '1.45' }}>
+              • <strong>Transit & Operational Schedule</strong>: Launch date and arrival date define the translunar transit window (~5 days for standard Apollo/Artemis trajectory).<br />
               • <strong>Duration Operational Gating</strong>: Missions exceeding 14 Earth days span past the lunar daytime window (~14.77 days) and require sustained high annual illumination to avoid cryogenic power failure during lunar darkness.<br />
               • <strong>Dataset Boundary</strong>: Evaluated illumination and Earth visibility metrics are derived from NASA PGDA Product 69 (18.6-year multi-year precession cycle simulation). Instantaneous hour-by-hour calendar date shadow casting requires SPICE orbit kernels not bundled in the client.
             </p>

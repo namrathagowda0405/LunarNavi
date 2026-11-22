@@ -16,6 +16,7 @@ export interface FormConstraint {
 export interface MissionFormState {
   missionType: MissionTypeId
   region: RegionId
+  launchDate?: string
   arrivalDate?: string
   arrivalWindowDays?: number
   durationDays?: number
@@ -267,6 +268,7 @@ export function getMissionPresetState(
   return {
     missionType: typeId,
     region: 'south-pole',
+    launchDate: overrides?.launchDate ?? '2027-05-27',
     arrivalDate: overrides?.arrivalDate ?? '2027-06-01',
     arrivalWindowDays: overrides?.arrivalWindowDays ?? 7,
     durationDays: duration,
@@ -284,6 +286,7 @@ export function defaultFormState(): MissionFormState {
   return {
     missionType: 'science',
     region: 'south-pole',
+    launchDate: '2027-05-27',
     arrivalDate: '2027-06-01',
     arrivalWindowDays: 7,
     durationDays: 14,
@@ -457,15 +460,33 @@ export function buildMissionProfile(form: MissionFormState): BuildMissionResult 
     })
   }
 
+  // Validate Launch Date if provided
+  const launchDate = form.launchDate?.trim()
+  if (launchDate !== undefined) {
+    if (!launchDate) {
+      errors.push('Planned launch/departure date is required.')
+    } else {
+      const parsedLaunch = new Date(launchDate)
+      if (isNaN(parsedLaunch.getTime())) {
+        errors.push('Planned launch/departure date must be a valid calendar date (YYYY-MM-DD).')
+      }
+    }
+  }
+
   // Validate Arrival Date if provided
   const arrivalDate = form.arrivalDate?.trim()
   if (arrivalDate !== undefined) {
     if (!arrivalDate) {
       errors.push('Expected lunar arrival date is required.')
     } else {
-      const parsedDate = new Date(arrivalDate)
-      if (isNaN(parsedDate.getTime())) {
+      const parsedArrival = new Date(arrivalDate)
+      if (isNaN(parsedArrival.getTime())) {
         errors.push('Expected lunar arrival date must be a valid calendar date (YYYY-MM-DD).')
+      } else if (launchDate) {
+        const parsedLaunch = new Date(launchDate)
+        if (!isNaN(parsedLaunch.getTime()) && parsedArrival.getTime() < parsedLaunch.getTime()) {
+          errors.push('Estimated lunar arrival date must not precede planned launch/departure date.')
+        }
       }
     }
   }
@@ -505,15 +526,16 @@ export function buildMissionProfile(form: MissionFormState): BuildMissionResult 
   const regionOpt = REGION_OPTIONS.find((r) => r.id === form.region)
   const regionLabel = regionOpt?.label ?? 'Lunar South Pole'
 
+  const launchStr = launchDate ? launchDate : '2027-05-27'
   const dateStr = arrivalDate ? arrivalDate : '2027-06-01'
-  const windowDays = typeof form.arrivalWindowDays === 'number' ? form.arrivalWindowDays : 7
-  const windowStr = windowDays > 0 ? ` (±${Math.round(windowDays / 2)}d window)` : ' (exact date)'
+  const windowDays = typeof form.arrivalWindowDays === 'number' ? form.arrivalWindowDays : 0
+  const windowStr = windowDays > 0 ? ` (±${Math.round(windowDays / 2)}d window)` : ''
   const durationStr = typeof form.durationDays === 'number' ? `${form.durationDays} Earth days` : '14 Earth days'
 
   const profile: MissionProfile = {
     id: `mission-${form.missionType}`,
     name: `${typeLabel} Profile`,
-    description: `User-configured ${typeLabel.toLowerCase()} profile targeting ${regionLabel}. Planned arrival: ${dateStr}${windowStr}, stay duration: ${durationStr}. (Illumination & Earth visibility evaluated via NASA PGDA 18.6-yr multi-year validated model).`,
+    description: `User-configured ${typeLabel.toLowerCase()} profile targeting ${regionLabel}. Planned launch: ${launchStr}, arrival: ${dateStr}${windowStr}, stay duration: ${durationStr}. (Illumination & Earth visibility evaluated via NASA PGDA 18.6-yr multi-year validated model; instantaneous SPICE shadow casting not bundled).`,
     weights: normalizedWeights,
     constraints: parsedConstraints,
   }

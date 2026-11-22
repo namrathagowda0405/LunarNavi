@@ -30,13 +30,42 @@ function getInitialView(): ViewId {
   return 'overview'
 }
 
+const FORM_STATE_STORAGE_KEY = 'lunarnavi_form_state'
+const CONFIGURED_MISSION_STORAGE_KEY = 'lunarnavi_configured_mission'
+
+function getInitialFormState(): MissionFormState {
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem(FORM_STATE_STORAGE_KEY)
+      if (saved) return JSON.parse(saved)
+    } catch (e) {
+      console.warn('Could not read form state from localStorage:', e)
+    }
+  }
+  return defaultFormState()
+}
+
+function getInitialConfiguredMission(): MissionProfile | null {
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem(CONFIGURED_MISSION_STORAGE_KEY)
+      if (saved) return JSON.parse(saved)
+    } catch (e) {
+      console.warn('Could not read configured mission from localStorage:', e)
+    }
+  }
+  return null
+}
+
 export function App() {
   // Default to Overview Dashboard as the landing page, or sync with URL hash
   const [activeView, setActiveView] = useState<ViewId>(getInitialView)
-  // Form state preserved in application state across navigation
-  const [formState, setFormState] = useState<MissionFormState>(defaultFormState)
+  // Form state preserved across navigation and page refresh
+  const [formState, setFormState] = useState<MissionFormState>(getInitialFormState)
   // Stored validated mission profile
-  const [configuredMission, setConfiguredMission] = useState<MissionProfile | null>(null)
+  const [configuredMission, setConfiguredMission] = useState<MissionProfile | null>(getInitialConfiguredMission)
+  // Targeted site to focus on the Lunar Map
+  const [targetMapSiteId, setTargetMapSiteId] = useState<string | null>(null)
 
   // Unified live active mission profile derived from formState, keeping all views in sync
   const activeMission: MissionProfile = useMemo(() => {
@@ -65,9 +94,33 @@ export function App() {
     setActiveView(view)
   }
 
+  const handleFormChange = (nextState: MissionFormState) => {
+    setFormState(nextState)
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(FORM_STATE_STORAGE_KEY, JSON.stringify(nextState))
+      } catch (e) {
+        console.warn('Could not persist form state to localStorage:', e)
+      }
+    }
+  }
+
   const handleAnalyzeSuccess = (profile: MissionProfile) => {
     setConfiguredMission(profile)
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(CONFIGURED_MISSION_STORAGE_KEY, JSON.stringify(profile))
+        localStorage.setItem(FORM_STATE_STORAGE_KEY, JSON.stringify(formState))
+      } catch (e) {
+        console.warn('Could not persist mission to localStorage:', e)
+      }
+    }
     handleViewChange('results')
+  }
+
+  const handleViewOnMap = (siteId?: string) => {
+    setTargetMapSiteId(siteId || null)
+    handleViewChange('map')
   }
 
   return (
@@ -110,7 +163,7 @@ export function App() {
           {activeView === 'setup' && (
             <MissionSetup
               formState={formState}
-              onFormChange={setFormState}
+              onFormChange={handleFormChange}
               onAnalyzeSuccess={handleAnalyzeSuccess}
             />
           )}
@@ -120,6 +173,7 @@ export function App() {
               activeMission={activeMission}
               formState={formState}
               onNavigate={handleViewChange}
+              targetSiteId={targetMapSiteId}
             />
           )}
           {activeView === 'sites' && (
@@ -137,6 +191,7 @@ export function App() {
               activeMission={activeMission}
               onEditMission={() => handleViewChange('setup')}
               onNavigate={handleViewChange}
+              onViewOnMap={handleViewOnMap}
             />
           )}
           {activeView === 'robustness' && (

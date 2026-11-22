@@ -24,6 +24,7 @@ interface ResultsProps {
   activeMission?: MissionProfile | null
   onEditMission: () => void
   onNavigate?: (view: ViewId) => void
+  onViewOnMap?: (siteId?: string) => void
 }
 
 export function Results({
@@ -32,6 +33,7 @@ export function Results({
   activeMission: propActiveMission,
   onEditMission,
   onNavigate,
+  onViewOnMap,
 }: ResultsProps) {
   // Use prop active mission, or configured mission, or fall back to default profile for the current form state
   const activeMission: MissionProfile = useMemo(() => {
@@ -41,6 +43,7 @@ export function Results({
   }, [propActiveMission, configuredMission, formState.missionType])
 
   const [showHeadToHead, setShowHeadToHead] = useState<boolean>(true)
+  const [inspectSite, setInspectSite] = useState<CentralizedSite | null>(null)
 
   // 1. Feasibility filtering
   const centralizedSites = CANDIDATE_SITES as CentralizedSite[]
@@ -206,6 +209,9 @@ export function Results({
             </p>
             <div style={{ marginTop: '0.4rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap', fontSize: '0.775rem', fontFamily: 'var(--font-mono)' }}>
               <span style={{ background: 'rgba(255,255,255,0.06)', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
+                🚀 Launch: <strong>{formState.launchDate ?? '2027-05-27'}</strong>
+              </span>
+              <span style={{ background: 'rgba(255,255,255,0.06)', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
                 📅 Arrival: <strong>{formState.arrivalDate ?? '2027-06-01'}</strong> {formState.arrivalWindowDays ? `(±${Math.round(formState.arrivalWindowDays / 2)}d)` : ''}
               </span>
               <span style={{ background: 'rgba(255,255,255,0.06)', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
@@ -281,6 +287,87 @@ export function Results({
         </div>
       </section>
 
+      {/* DIRECT LUNAR MAP PROMINENT ACTION BANNER */}
+      {topSite && (
+        <section
+          className="panel"
+          style={{
+            background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(15, 23, 42, 0.95) 100%)',
+            border: '1px solid rgba(34, 197, 94, 0.4)',
+            padding: '1.1rem 1.35rem',
+            marginBottom: '1.5rem',
+            borderRadius: '8px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '1rem',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.35)',
+          }}
+          aria-label="Direct Map View Action"
+        >
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.35rem', flexWrap: 'wrap' }}>
+              <span
+                style={{
+                  background: '#22c55e',
+                  color: '#0f172a',
+                  fontWeight: 800,
+                  fontSize: '0.75rem',
+                  padding: '0.2rem 0.55rem',
+                  borderRadius: '4px',
+                  fontFamily: 'var(--font-mono)',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                PRIMARY #1
+              </span>
+              <strong style={{ fontSize: '1.15rem', color: '#f8fafc' }}>{topSite.name}</strong>
+              {backupSite && (
+                <>
+                  <span style={{ color: 'var(--text-muted)' }}>|</span>
+                  <span
+                    style={{
+                      background: '#f97316',
+                      color: '#0f172a',
+                      fontWeight: 800,
+                      fontSize: '0.75rem',
+                      padding: '0.2rem 0.55rem',
+                      borderRadius: '4px',
+                      fontFamily: 'var(--font-mono)',
+                      letterSpacing: '0.04em',
+                    }}
+                  >
+                    BACKUP #{backupScore?.rank ?? 2}
+                  </span>
+                  <strong style={{ fontSize: '1.05rem', color: '#fed7aa' }}>{backupSite.name}</strong>
+                </>
+              )}
+            </div>
+            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+              Multi-criteria ranking finalized. Inspect recommended landing sites situated on the Lunar South Pole cartographic viewer with calibrated NASA LOLA terrain layers.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn btn--primary"
+            style={{
+              backgroundColor: '#22c55e',
+              borderColor: '#22c55e',
+              color: '#0f172a',
+              fontWeight: 800,
+              fontSize: '0.95rem',
+              padding: '0.65rem 1.25rem',
+              boxShadow: '0 0 16px rgba(34, 197, 94, 0.4)',
+              cursor: 'pointer',
+            }}
+            onClick={() => (onViewOnMap ? onViewOnMap(topSite.id) : onNavigate?.('map'))}
+          >
+            🗺️ View Recommended Sites on Lunar Map ↗
+          </button>
+        </section>
+      )}
+
       {/* TOP RECOMMENDATION WINNER BANNER */}
       {topSite && topScore && (
         <section className="winner-card panel" aria-labelledby="heading-top-recommendation">
@@ -313,7 +400,15 @@ export function Results({
 
             <div className="winner-main">
               <div>
-                <h2 id="heading-top-recommendation" className="winner-title">{topSite.name}</h2>
+                <h2
+                  id="heading-top-recommendation"
+                  className="winner-title"
+                  style={{ cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: '4px' }}
+                  onClick={() => setInspectSite(topSite)}
+                  title="Click to view verified scientific measurements and dataset provenance"
+                >
+                  {topSite.name}
+                </h2>
                 <div className="winner-meta">
                   <span className="site-region-tag">{topSite.region}</span>
                   <span className="coord-badge">
@@ -325,24 +420,32 @@ export function Results({
                 </div>
               </div>
 
-              {onNavigate && (
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="btn btn--primary"
+                  onClick={() => (onViewOnMap ? onViewOnMap(topSite.id) : onNavigate?.('map'))}
+                >
+                  Locate on Lunar Map ↗
+                </button>
+                <button
+                  type="button"
+                  className="btn btn--secondary"
+                  onClick={() => setInspectSite(topSite)}
+                  title="View NASA dataset telemetry breakdown"
+                >
+                  Inspect Site Telemetry 🔍
+                </button>
+                {onNavigate && (
                   <button
                     type="button"
-                    className="btn btn--primary"
-                    onClick={() => onNavigate('map')}
-                  >
-                    Locate on Lunar Map ↗
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn--secondary"
+                    className="btn btn--subtle"
                     onClick={() => onNavigate('robustness')}
                   >
                     Examine Robustness →
                   </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
             {/* Metrics Snapshot */}
@@ -415,7 +518,20 @@ export function Results({
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.75rem' }}>
             <div>
-              <h2 id="heading-backup-recommendation" style={{ fontSize: '1.35rem', fontWeight: 700, margin: '0 0 0.25rem 0', color: 'var(--text-primary)' }}>
+              <h2
+                id="heading-backup-recommendation"
+                style={{
+                  fontSize: '1.35rem',
+                  fontWeight: 700,
+                  margin: '0 0 0.25rem 0',
+                  color: 'var(--text-primary)',
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                  textUnderlineOffset: '4px',
+                }}
+                onClick={() => setInspectSite(backupSite)}
+                title="Click to view verified scientific measurements and dataset provenance"
+              >
                 {backupSite.name}
               </h2>
               <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap', fontSize: '0.85rem' }}>
@@ -429,15 +545,23 @@ export function Results({
               </div>
             </div>
 
-            {onNavigate && (
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               <button
                 type="button"
                 className="btn btn--secondary btn--small"
-                onClick={() => onNavigate('map')}
+                onClick={() => (onViewOnMap ? onViewOnMap(backupSite.id) : onNavigate?.('map'))}
               >
                 Locate Backup on Map ↗
               </button>
-            )}
+              <button
+                type="button"
+                className="btn btn--subtle btn--small"
+                onClick={() => setInspectSite(backupSite)}
+                title="View NASA dataset telemetry breakdown"
+              >
+                Inspect Telemetry 🔍
+              </button>
+            </div>
           </div>
 
           {/* Technical Rationale Callout */}
@@ -475,6 +599,33 @@ export function Results({
               <span className="winner-metric-sub">
                 {backupSite.resourceEvidence.kind.replace('-', ' ')}
               </span>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* NO SUITABLE BACKUP CANDIDATE TRANSPARENCY NOTICE */}
+      {!backupSite && topSite && (
+        <section
+          className="panel"
+          style={{
+            padding: '1.25rem 1.5rem',
+            marginBottom: '1.5rem',
+            borderLeft: '4px solid #f59e0b',
+            background: 'rgba(245, 158, 11, 0.08)',
+          }}
+          aria-label="Backup Landing Site Status"
+        >
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+            <span style={{ fontSize: '1.5rem', lineHeight: 1 }} aria-hidden="true">⚠️</span>
+            <div>
+              <strong style={{ color: '#fbbf24', fontSize: '0.95rem' }}>
+                No Suitable Backup Landing Site Determined
+              </strong>
+              <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                Under the active mission profile and physical engineering constraints, only one candidate site ({topSite.name}) satisfies all non-negotiable physical constraints.
+                In adherence to scientific integrity and NASA verification standards, LunarNavi does not fabricate hypothetical or unverified backup candidates. If an operational backup is mandatory, evaluate adjusting slope or solar constraints in Mission Setup.
+              </p>
             </div>
           </div>
         </section>
@@ -642,7 +793,7 @@ export function Results({
                   <th scope="col" className="text-right" style={{ minWidth: '80px' }}>Comms (%)</th>
                   <th scope="col" className="text-right" style={{ minWidth: '80px' }}>Resource</th>
                   <th scope="col" className="text-right" style={{ minWidth: '80px' }}>Science</th>
-                  {onNavigate && <th scope="col" className="col-action text-center">Action</th>}
+                  {(onViewOnMap || onNavigate) && <th scope="col" className="col-action text-center">Action</th>}
                 </tr>
               </thead>
               <tbody>
@@ -665,7 +816,24 @@ export function Results({
                       </td>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap' }}>
-                          <strong>{site.name}</strong>
+                          <button
+                            type="button"
+                            onClick={() => setInspectSite(site)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: 'inherit',
+                              font: 'inherit',
+                              cursor: 'pointer',
+                              textAlign: 'left',
+                              padding: 0,
+                              textDecoration: 'underline',
+                              textUnderlineOffset: '3px',
+                            }}
+                            title={`Inspect verified measurements for ${site.name}`}
+                          >
+                            <strong>{site.name}</strong>
+                          </button>
                           {isTop && (
                             <span className="winner-rank-badge font-mono" style={{ fontSize: '0.65rem', padding: '0.1rem 0.35rem' }}>
                               PRIMARY
@@ -719,12 +887,13 @@ export function Results({
                         {site.criteria.resource.value !== null ? site.criteria.resource.value : '—'}
                       </td>
                       <td className="font-mono text-right text-nowrap">{site.criteria.science.value}</td>
-                      {onNavigate && (
+                      {(onViewOnMap || onNavigate) && (
                         <td className="col-action text-center text-nowrap">
                           <button
                             type="button"
                             className="btn btn--subtle btn--small"
-                            onClick={() => onNavigate('map')}
+                            onClick={() => (onViewOnMap ? onViewOnMap(site.id) : onNavigate?.('map'))}
+                            title={`Locate ${site.name} on Lunar Map`}
                           >
                             Map ↗
                           </button>
@@ -791,6 +960,178 @@ export function Results({
           ))}
         </div>
       </section>
+
+      {/* TECHNICAL PROVENANCE INSPECTION MODAL */}
+      {inspectSite && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="inspect-modal-title"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(4, 8, 18, 0.85)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '1rem',
+          }}
+          onClick={() => setInspectSite(null)}
+        >
+          <div
+            className="panel"
+            style={{
+              maxWidth: '640px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              padding: '1.5rem',
+              border: '1px solid var(--border-medium)',
+              boxShadow: '0 12px 48px rgba(0, 0, 0, 0.8)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+              <div>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.35rem', flexWrap: 'wrap' }}>
+                  <span
+                    className={`badge-designation ${
+                      inspectSite.designation === 'official-artemis-candidate'
+                        ? 'badge-designation--artemis'
+                        : 'badge-designation--research'
+                    }`}
+                  >
+                    {inspectSite.designation === 'official-artemis-candidate'
+                      ? 'Official Artemis III Candidate'
+                      : 'Scientific Research Location'}
+                  </span>
+                  <span className="coord-badge font-mono">
+                    {inspectSite.latitude.toFixed(2)}°S, {inspectSite.longitude.toFixed(2)}°E
+                  </span>
+                </div>
+                <h2 id="inspect-modal-title" style={{ fontSize: '1.4rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+                  {inspectSite.name}
+                </h2>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  Geological Complex: {inspectSite.region} · Frame: IAU DE421 · Org: {inspectSite.sourceOrganization}
+                </span>
+              </div>
+              <button
+                type="button"
+                className="btn btn--subtle btn--small"
+                onClick={() => setInspectSite(null)}
+                aria-label="Close Site Details"
+                style={{ fontSize: '1.1rem', lineHeight: 1, padding: '0.2rem 0.5rem' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Verified Measurements Table */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <h4 style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                Verified Physical Topography & Telemetry
+              </h4>
+              <div className="table-responsive">
+                <table style={{ width: '100%', fontSize: '0.825rem', borderCollapse: 'collapse' }}>
+                  <tbody>
+                    <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                      <td style={{ padding: '0.45rem 0', color: 'var(--text-secondary)' }}>Surface Slope (50m baseline)</td>
+                      <td className="font-mono text-right" style={{ padding: '0.45rem 0', fontWeight: 700, color: '#f8fafc' }}>
+                        {inspectSite.measurements.slope.value !== null ? `${inspectSite.measurements.slope.value}°` : 'Unknown'}
+                      </td>
+                      <td style={{ padding: '0.45rem 0 0.45rem 0.75rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>NASA LOLA 50m GDR</td>
+                    </tr>
+                    <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                      <td style={{ padding: '0.45rem 0', color: 'var(--text-secondary)' }}>Topographic Elevation</td>
+                      <td className="font-mono text-right" style={{ padding: '0.45rem 0', fontWeight: 700, color: 'var(--accent-teal)' }}>
+                        {inspectSite.measurements.elevation.value !== null ? `${inspectSite.measurements.elevation.value > 0 ? '+' : ''}${inspectSite.measurements.elevation.value.toLocaleString()} m` : '—'}
+                      </td>
+                      <td style={{ padding: '0.45rem 0 0.45rem 0.75rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>LOLA 20m/px DEM</td>
+                    </tr>
+                    <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                      <td style={{ padding: '0.45rem 0', color: 'var(--text-secondary)' }}>RMS Roughness (50m)</td>
+                      <td className="font-mono text-right" style={{ padding: '0.45rem 0', fontWeight: 700, color: inspectSite.measurements.roughness.value !== null ? '#f8fafc' : '#fbbf24' }}>
+                        {inspectSite.measurements.roughness.value !== null ? `${inspectSite.measurements.roughness.value} m` : 'Unassessed'}
+                      </td>
+                      <td style={{ padding: '0.45rem 0 0.45rem 0.75rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>LOLA RMS Deviation</td>
+                    </tr>
+                    <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                      <td style={{ padding: '0.45rem 0', color: 'var(--text-secondary)' }}>Annual Solar Illumination</td>
+                      <td className="font-mono text-right" style={{ padding: '0.45rem 0', fontWeight: 700, color: '#facc15' }}>
+                        {inspectSite.measurements.illumination.value !== null ? `${inspectSite.measurements.illumination.value}%` : '—'}
+                      </td>
+                      <td style={{ padding: '0.45rem 0 0.45rem 0.75rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>PGDA 69 (Mazarico et al.)</td>
+                    </tr>
+                    <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                      <td style={{ padding: '0.45rem 0', color: 'var(--text-secondary)' }}>Direct Earth Line-of-Sight</td>
+                      <td className="font-mono text-right" style={{ padding: '0.45rem 0', fontWeight: 700, color: '#4ade80' }}>
+                        {inspectSite.communicationModel.directEarthVisibilityPercent !== null ? `${inspectSite.communicationModel.directEarthVisibilityPercent}%` : '—'}
+                      </td>
+                      <td style={{ padding: '0.45rem 0 0.45rem 0.75rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>Topocentric Libration (18.6y)</td>
+                    </tr>
+                    <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                      <td style={{ padding: '0.45rem 0', color: 'var(--text-secondary)' }}>Resource Grounding</td>
+                      <td className="font-mono text-right" style={{ padding: '0.45rem 0', fontWeight: 700 }}>
+                        <span className={`badge-evidence badge-evidence--${inspectSite.resourceEvidence.kind}`}>
+                          {inspectSite.resourceEvidence.kind.toUpperCase().replace('-', ' ')}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.45rem 0 0.45rem 0.75rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>{inspectSite.resourceEvidence.citation}</td>
+                    </tr>
+                    <tr>
+                      <td style={{ padding: '0.45rem 0', color: 'var(--text-secondary)' }}>Permanently Shadowed Region (PSR)</td>
+                      <td className="font-mono text-right" style={{ padding: '0.45rem 0', fontWeight: 700, color: inspectSite.measurements.isPsr.value ? '#38bdf8' : '#94a3b8' }}>
+                        {inspectSite.measurements.isPsr.value ? 'Inside Cold Trap' : `${inspectSite.measurements.psrDistanceKm} km to PSR`}
+                      </td>
+                      <td style={{ padding: '0.45rem 0 0.45rem 0.75rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>LRO Diviner Thermal Atlas</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Scientific Provenance Summary */}
+            <div style={{ backgroundColor: 'rgba(15, 23, 42, 0.7)', border: '1px solid var(--border-subtle)', padding: '0.85rem 1rem', borderRadius: '6px', marginBottom: '1.25rem', fontSize: '0.8rem' }}>
+              <strong style={{ color: 'var(--text-secondary)' }}>Resource Potential & Scientific Provenance:</strong>
+              <p style={{ margin: '0.25rem 0 0 0', color: 'var(--text-primary)', lineHeight: 1.45 }}>
+                {inspectSite.resourceEvidence.summary}
+              </p>
+            </div>
+
+            {/* Modal Actions */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="btn btn--secondary"
+                onClick={() => setInspectSite(null)}
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                className="btn btn--primary"
+                onClick={() => {
+                  const siteId = inspectSite.id
+                  setInspectSite(null)
+                  if (onViewOnMap) {
+                    onViewOnMap(siteId)
+                  } else if (onNavigate) {
+                    onNavigate('map')
+                  }
+                }}
+              >
+                Locate on Lunar Map ↗
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

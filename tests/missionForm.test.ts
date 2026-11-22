@@ -302,10 +302,11 @@ describe('buildMissionProfile', () => {
     expect(result.errors.some((e) => e.includes('All weights are zero'))).toBe(true)
   })
 
-  it('defaultFormState returns expected initial values including arrivalDate and durationDays', () => {
+  it('defaultFormState returns expected initial values including launchDate, arrivalDate and durationDays', () => {
     const def = defaultFormState()
     expect(def.missionType).toBe('science')
     expect(def.region).toBe('south-pole')
+    expect(def.launchDate).toBe('2027-05-27')
     expect(def.arrivalDate).toBe('2027-06-01')
     expect(def.arrivalWindowDays).toBe(7)
     expect(def.durationDays).toBe(14)
@@ -330,6 +331,35 @@ describe('buildMissionProfile', () => {
     expect(resource.durationDays).toBe(30)
     expect(crewed.durationDays).toBe(30)
     expect(comms.durationDays).toBe(180)
+  })
+
+  it('buildMissionProfile validates launch date and rejects invalid launch dates', () => {
+    const emptyLaunchForm: MissionFormState = {
+      ...defaultFormState(),
+      launchDate: '   ',
+    }
+    const emptyRes = buildMissionProfile(emptyLaunchForm)
+    expect(emptyRes.ok).toBe(false)
+    expect(emptyRes.errors.some((e) => e.includes('launch/departure date is required'))).toBe(true)
+
+    const invalidLaunchForm: MissionFormState = {
+      ...defaultFormState(),
+      launchDate: 'not-a-valid-date',
+    }
+    const invalidRes = buildMissionProfile(invalidLaunchForm)
+    expect(invalidRes.ok).toBe(false)
+    expect(invalidRes.errors.some((e) => e.includes('valid calendar date'))).toBe(true)
+  })
+
+  it('buildMissionProfile rejects arrival date preceding launch date', () => {
+    const invalidOrderForm: MissionFormState = {
+      ...defaultFormState(),
+      launchDate: '2027-06-15',
+      arrivalDate: '2027-06-10',
+    }
+    const res = buildMissionProfile(invalidOrderForm)
+    expect(res.ok).toBe(false)
+    expect(res.errors.some((e) => e.includes('must not precede planned launch'))).toBe(true)
   })
 
   it('buildMissionProfile validates arrival date and rejects invalid dates', () => {
