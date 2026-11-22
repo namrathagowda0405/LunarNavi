@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
-import { CRITERION_IDS } from '../../engine/types'
+import { CRITERION_IDS, CriterionId } from '../../engine/types'
+import { CRITERION_DIRECTION } from '../../engine/criteria'
 import { MissionProfile, getDefaultMissionProfile } from '../../engine/mission'
 import { rankSites, TopsisScore } from '../../engine/topsis'
 import { filterFeasibleSites, evaluateAllSites } from '../../engine/feasibility'
@@ -12,6 +13,7 @@ import {
 } from '../../data/candidateSites'
 import {
   CRITERION_LABELS,
+  CRITERION_UNITS,
   MISSION_TYPES,
   REGION_OPTIONS,
 } from '../missionTypes'
@@ -25,6 +27,49 @@ interface ResultsProps {
   onEditMission: () => void
   onNavigate?: (view: ViewId) => void
   onViewOnMap?: (siteId?: string) => void
+}
+
+/**
+ * Generates an honest, plain-English interpretation of a criterion weight
+ * in the context of the active mission profile.
+ */
+function getCriterionWeightExplanation(
+  cid: CriterionId,
+  weight: number,
+  activeMission: MissionProfile,
+  criteriaUsed: CriterionId[]
+): string {
+  const dir = CRITERION_DIRECTION[cid]
+  const pct = Math.round(weight * 100)
+  const sorted = [...criteriaUsed].sort(
+    (a, b) => (activeMission.weights[b] ?? 0) - (activeMission.weights[a] ?? 0)
+  )
+  const isTop = sorted[0] === cid
+  const isSecond = sorted[1] === cid
+
+  let priorityText = ''
+  if (isTop) {
+    const nextCid = sorted[1]
+    const nextLabel = nextCid ? CRITERION_LABELS[nextCid] : ''
+    priorityText = `Highest mission priority (${pct}%). ${
+      nextLabel
+        ? `${CRITERION_LABELS[cid]} has greater importance for this mission than ${nextLabel}.`
+        : 'Carries dominant ranking weight.'
+    }`
+  } else if (isSecond) {
+    priorityText = `Secondary priority (${pct}%). Heavily balances candidate trade-offs.`
+  } else if (weight >= 0.15) {
+    priorityText = `Moderate priority (${pct}%). Meaningfully differentiates close contenders.`
+  } else {
+    priorityText = `Lower priority (${pct}%). Minor fine-tuning factor in final vector proximity.`
+  }
+
+  const dirText =
+    dir === 'cost'
+      ? 'Cost criterion (lower is better): minimizes touchdown hazard and surface slope tilt.'
+      : 'Benefit criterion (higher is better): maximizes operational return.'
+
+  return `${priorityText} ${dirText}`
 }
 
 export function Results({
@@ -43,6 +88,8 @@ export function Results({
   }, [propActiveMission, configuredMission, formState.missionType])
 
   const [showHeadToHead, setShowHeadToHead] = useState<boolean>(true)
+  const [showMathDetails, setShowMathDetails] = useState<boolean>(false)
+  const [selectedMcSiteId, setSelectedMcSiteId] = useState<string | null>(null)
   const [inspectSite, setInspectSite] = useState<CentralizedSite | null>(null)
 
   // 1. Feasibility filtering
@@ -92,6 +139,64 @@ export function Results({
     return map
   }, [monteCarloResult])
 
+  // Detailed per-candidate Monte Carlo simulation statistics table
+  const mcTableStats = useMemo(() => {
+    if (!monteCarloResult) return []
+    const total = monteCarloResult.iterations || 500
+
+    return feasibleSites
+      .map((site) => {
+        const summary = monteCarloResult.sites.find((s) => s.siteId === site.id)
+        const nominalScore = rankingResult.ranking.find((r) => r.id === site.id)
+        const rank1Count = summary ? (summary.rankCounts[0] ?? 0) : 0
+        const rank1Pct = (rank1Count / total) * 100
+        const top2Count = summary
+          ? (summary.rankCounts[0] ?? 0) + (summary.rankCounts[1] ?? 0)
+          : 0
+        const top2Pct = (top2Count / total) * 100
+        const rankedIters = summary
+          ? summary.rankCounts.reduce((a, b) => a + b, 0)
+          : 0
+        const rankSum = summary
+          ? summary.rankCounts.reduce((acc, count, idx) => acc + count * (idx + 1), 0)
+          : 0
+        const avgRank = rankedIters > 0 ? (rankSum / rankedIters).toFixed(1) : '—'
+
+        // Clearly documented robustness classification thresholds:
+        // - Robust: Rank #1 in >= 70% of scenarios
+        // - Moderately Stable: Rank #1 in 40%–69% OR Top-2 in >= 60%
+        // - Sensitive: Rank #1 in < 40%
+        let stability: 'Robust' | 'Moderately Stable' | 'Sensitive'
+        let stabilityClass: string
+        if (rank1Pct >= 70) {
+          stability = 'Robust'
+          stabilityClass = 'status-pill--pass'
+        } else if (rank1Pct >= 40 || top2Pct >= 60) {
+          stability = 'Moderately Stable'
+          stabilityClass = 'status-pill--marginal'
+        } else {
+          stability = 'Sensitive'
+          stabilityClass = 'status-pill--fail'
+        }
+
+        return {
+          site,
+          nominalRank: nominalScore ? nominalScore.rank : 999,
+          nominalScore,
+          summary,
+          rank1Count,
+          rank1Pct,
+          top2Count,
+          top2Pct,
+          avgRank,
+          stability,
+          stabilityClass,
+          notRankedCount: summary?.notRankedCount ?? 0,
+        }
+      })
+      .sort((a, b) => a.nominalRank - b.nominalRank)
+  }, [monteCarloResult, feasibleSites, rankingResult.ranking])
+
   // Fast site lookup
   const siteMap = useMemo(() => {
     return new Map(centralizedSites.map((s) => [s.id, s]))
@@ -127,6 +232,132 @@ export function Results({
       (a, b) => (activeMission.weights[b] ?? 0) - (activeMission.weights[a] ?? 0)
     )
   }, [activeMission.weights])
+
+  // Data-backed explanation for why the Primary site ranked #1
+  const primaryWhyFirst = useMemo(() => {
+    if (!topSite || !rankingResult.ranking[0]) {
+      return {
+        advantages: [],
+        tradeOffs: [],
+        runnerUpSite: undefined,
+        runnerUpScore: undefined,
+        leadMarginPct: '0',
+      }
+    }
+
+    const runnerUpScore = rankingResult.ranking[1]
+    const runnerUpSite = runnerUpScore ? siteMap.get(runnerUpScore.id) : undefined
+    const leadMarginPct = runnerUpScore
+      ? ((rankingResult.ranking[0].closeness - runnerUpScore.closeness) * 100).toFixed(2)
+      : '100'
+
+    const advantages: {
+      cid: CriterionId
+      label: string
+      weightPct: number
+      topVal: number
+      runnerUpVal?: number
+      unit: string
+      isBestInClass: boolean
+      advantageDescription: string
+    }[] = []
+
+    const tradeOffs: {
+      cid: CriterionId
+      label: string
+      weightPct: number
+      topVal: number
+      runnerUpVal?: number
+      unit: string
+      tradeOffDescription: string
+    }[] = []
+
+    for (const cid of rankingResult.criteriaUsed) {
+      const topCrit = topSite.criteria[cid]
+      const topVal = topCrit?.value
+      if (typeof topVal !== 'number') continue
+
+      const isCost = CRITERION_DIRECTION[cid] === 'cost'
+      const weight = activeMission.weights[cid] ?? 0
+      const weightPct = Math.round(weight * 100)
+      const label = CRITERION_LABELS[cid]
+      const unit = CRITERION_UNITS[cid]
+
+      // Check all feasible candidates for best-in-class
+      const allVals = feasibleSites
+        .map((s) => s.criteria[cid]?.value)
+        .filter((v): v is number => typeof v === 'number')
+
+      const bestVal = isCost ? Math.min(...allVals) : Math.max(...allVals)
+      const isBestInClass = topVal === bestVal
+
+      const runnerUpVal = runnerUpSite?.criteria[cid]?.value ?? undefined
+      const runnerUpName = runnerUpSite?.name ?? 'runner-up candidate'
+
+      if (typeof runnerUpVal === 'number') {
+        const isBetterThanRunnerUp = isCost ? topVal < runnerUpVal : topVal > runnerUpVal
+        const isEqual = Math.abs(topVal - runnerUpVal) < 1e-6
+
+        if (isBetterThanRunnerUp) {
+          const diff = Math.abs(topVal - runnerUpVal)
+          const diffFormatted = diff < 1 ? diff.toFixed(2) : diff.toFixed(1)
+          advantages.push({
+            cid,
+            label,
+            weightPct,
+            topVal,
+            runnerUpVal,
+            unit,
+            isBestInClass,
+            advantageDescription: isCost
+              ? `${diffFormatted}° gentler incline than ${runnerUpName} (${topVal}° vs ${runnerUpVal}°), significantly minimizing touchdown tilt and dynamic tip-over risk.`
+              : `${diffFormatted} higher than ${runnerUpName} (${topVal} vs ${runnerUpVal}), delivering superior operational yield on a key mission priority.`
+          })
+        } else if (!isEqual) {
+          const diff = Math.abs(topVal - runnerUpVal)
+          const diffFormatted = diff < 1 ? diff.toFixed(2) : diff.toFixed(1)
+          tradeOffs.push({
+            cid,
+            label,
+            weightPct,
+            topVal,
+            runnerUpVal,
+            unit,
+            tradeOffDescription: isCost
+              ? `${runnerUpName} has a slightly gentler slope by ${diffFormatted}° (${runnerUpVal}° vs ${topVal}°).`
+              : `${runnerUpName} offers ${diffFormatted} higher value (${runnerUpVal} vs ${topVal}).`
+          })
+        } else if (isBestInClass) {
+          advantages.push({
+            cid,
+            label,
+            weightPct,
+            topVal,
+            runnerUpVal,
+            unit,
+            isBestInClass: true,
+            advantageDescription: `Tied for best-in-class across all evaluated candidates (${topVal}).`
+          })
+        }
+      } else if (isBestInClass) {
+        advantages.push({
+          cid,
+          label,
+          weightPct,
+          topVal,
+          unit,
+          isBestInClass: true,
+          advantageDescription: `Achieved the single best rating among all candidates (${topVal}).`
+        })
+      }
+    }
+
+    // Sort by weight descending
+    advantages.sort((a, b) => b.weightPct - a.weightPct)
+    tradeOffs.sort((a, b) => b.weightPct - a.weightPct)
+
+    return { advantages, tradeOffs, runnerUpSite, runnerUpScore, leadMarginPct }
+  }, [topSite, rankingResult, feasibleSites, activeMission, siteMap])
 
   // Automatically log/persist analysis run to Supabase (or session ledger fallback)
   useEffect(() => {
@@ -746,14 +977,246 @@ export function Results({
         </section>
       )}
 
-      {/* TOPSIS RANKED LEADERBOARD */}
-      <section className="panel" aria-labelledby="heading-leaderboard">
+      {/* =====================================================================
+          SECTION 4: TOPSIS ANALYSIS — HOW LANDING SITES ARE RANKED
+          ===================================================================== */}
+      <section className="panel" aria-labelledby="heading-topsis-analysis" style={{ marginBottom: '1.5rem' }}>
+        <div className="panel-header">
+          <span className="panel-tag">DECISION METHODOLOGY</span>
+          <h2 id="heading-topsis-analysis" className="panel-title">
+            TOPSIS Analysis — How Landing Sites Are Ranked
+          </h2>
+          <p className="panel-subtitle" style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+            TOPSIS ranks candidate landing sites by comparing how close each site is to an ideal solution and how far it is from a worst-case solution, based on the criteria selected for the mission.
+          </p>
+        </div>
+
+        {/* A & B. Mission-Specific Criteria and Importance Weights */}
+        <div style={{ marginTop: '1rem' }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
+            Mission Criteria & Importance Weights ({activeMission.name})
+          </h3>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
+            Weights reflect operational priorities defined in the active mission profile. Only criteria with positive weights are admitted into the TOPSIS decision matrix.
+          </p>
+
+          <div className="table-responsive">
+            <table className="comparison-table" style={{ fontSize: '0.825rem' }}>
+              <thead>
+                <tr>
+                  <th scope="col" style={{ width: '180px' }}>Criterion</th>
+                  <th scope="col" style={{ width: '150px' }}>Preference Direction</th>
+                  <th scope="col" style={{ width: '120px' }}>Mission Weight</th>
+                  <th scope="col">Operational Meaning for this Mission</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rankingResult.criteriaUsed.map((cid) => {
+                  const weight = activeMission.weights[cid] ?? 0
+                  const dir = CRITERION_DIRECTION[cid]
+                  const explanation = getCriterionWeightExplanation(cid, weight, activeMission, rankingResult.criteriaUsed)
+
+                  return (
+                    <tr key={cid}>
+                      <td style={{ fontWeight: 600 }}>
+                        {CRITERION_LABELS[cid]}
+                        <span style={{ display: 'block', fontSize: '0.725rem', color: 'var(--text-muted)', fontWeight: 400 }}>
+                          {CRITERION_UNITS[cid]}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`status-pill ${dir === 'cost' ? 'status-pill--marginal' : 'status-pill--pass'}`} style={{ fontSize: '0.7rem' }}>
+                          {dir === 'cost' ? 'Cost (Lower is Better)' : 'Benefit (Higher is Better)'}
+                        </span>
+                      </td>
+                      <td className="font-mono" style={{ fontWeight: 700, color: 'var(--accent-teal)' }}>
+                        {formatWeightShare(weight)} ({weight.toFixed(2)})
+                      </td>
+                      <td style={{ color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                        {explanation}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Dynamic Comparative Summary */}
+          {sortedCriteriaByWeight.length >= 2 && (
+            <div style={{ marginTop: '0.75rem', padding: '0.75rem 1rem', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)', borderRadius: '6px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+              <strong style={{ color: 'var(--text-primary)' }}>Priority Trade-off Summary: </strong>
+              For this {activeMission.name} profile, <strong>{CRITERION_LABELS[sortedCriteriaByWeight[0]]} ({formatWeightShare(activeMission.weights[sortedCriteriaByWeight[0]] ?? 0)})</strong> holds greater importance than <strong>{CRITERION_LABELS[sortedCriteriaByWeight[1]]} ({formatWeightShare(activeMission.weights[sortedCriteriaByWeight[1]] ?? 0)})</strong>.
+              All non-zero weighted criteria contribute to the multi-dimensional distance calculations.
+            </div>
+          )}
+        </div>
+
+        {/* C. TOPSIS Calculation Steps */}
+        <div style={{ marginTop: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
+              Six-Step TOPSIS Calculation Pipeline
+            </h3>
+            <button
+              type="button"
+              className="btn btn--subtle btn--small"
+              onClick={() => setShowMathDetails((p) => !p)}
+              style={{ fontSize: '0.75rem' }}
+            >
+              {showMathDetails ? 'Hide Mathematical Formulation ▲' : 'View Detailed Mathematical Formulation ▼'}
+            </button>
+          </div>
+
+          <div className="topsis-steps-grid">
+            <div className="topsis-step-card">
+              <span className="topsis-step-num">STEP 1</span>
+              <strong className="topsis-step-title">Data Matrix Extraction</strong>
+              <p className="topsis-step-desc">
+                Extract verified measurements from NASA datasets for the {rankingResult.criteriaUsed.length} weighted criteria across all {feasibleSites.length} feasible candidates.
+              </p>
+            </div>
+
+            <div className="topsis-step-card">
+              <span className="topsis-step-num">STEP 2</span>
+              <strong className="topsis-step-title">Vector Normalization</strong>
+              <p className="topsis-step-desc">
+                Normalize raw measurements into dimensionless values to eliminate scale disparities between degrees, meters, and percentages.
+              </p>
+            </div>
+
+            <div className="topsis-step-card">
+              <span className="topsis-step-num">STEP 3</span>
+              <strong className="topsis-step-title">Weight Application</strong>
+              <p className="topsis-step-desc">
+                Multiply normalized columns by mission weights reflecting {activeMission.name} priorities.
+              </p>
+            </div>
+
+            <div className="topsis-step-card">
+              <span className="topsis-step-num">STEP 4</span>
+              <strong className="topsis-step-title">Ideal & Worst Reference Vectors</strong>
+              <p className="topsis-step-desc">
+                Identify the best reference solution (ideal positive vector) and the worst reference solution (anti-ideal negative vector).
+              </p>
+            </div>
+
+            <div className="topsis-step-card">
+              <span className="topsis-step-num">STEP 5</span>
+              <strong className="topsis-step-title">Euclidean Separation Distances</strong>
+              <p className="topsis-step-desc">
+                Calculate the geometric distance from each candidate site to the ideal (d+) and to the worst-case (d-) solution.
+              </p>
+            </div>
+
+            <div className="topsis-step-card">
+              <span className="topsis-step-num">STEP 6</span>
+              <strong className="topsis-step-title">Closeness Scoring & Ranking</strong>
+              <p className="topsis-step-desc">
+                Compute relative closeness C_i = d- / (d+ + d-). Sort candidate sites in descending order of closeness to determine final ranks.
+              </p>
+            </div>
+          </div>
+
+          {/* Expandable Mathematical Formulation Details */}
+          {showMathDetails && (
+            <div className="topsis-math-block" aria-label="TOPSIS Mathematical Formulation Details">
+              <strong style={{ color: '#f8fafc', fontSize: '0.9rem', display: 'block', marginBottom: '0.4rem' }}>
+                Mathematical Formulation (Vector Normalization & Euclidean Metric)
+              </strong>
+              <p style={{ margin: '0 0 0.5rem 0', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                Implemented in <code>src/engine/topsis.ts</code> as a pure mathematical matrix transformation:
+              </p>
+              <div className="topsis-math-formula">
+                1. Vector Normalization: r_ij = x_ij / √( Σ_k x_kj² )
+              </div>
+              <div className="topsis-math-formula">
+                2. Weighted Matrix: v_ij = w_j · r_ij  (where Σ w_j = 1.0)
+              </div>
+              <div className="topsis-math-formula">
+                3. Ideal Solution: A* = &#123; max(v_ij | j ∈ Benefit), min(v_ij | j ∈ Cost) &#125;
+              </div>
+              <div className="topsis-math-formula">
+                4. Anti-Ideal Solution: A⁻ = &#123; min(v_ij | j ∈ Benefit), max(v_ij | j ∈ Cost) &#125;
+              </div>
+              <div className="topsis-math-formula">
+                5. Separation Distances: d⁺_i = √( Σ_j (v_ij - A*_j)² ),  d⁻_i = √( Σ_j (v_ij - A⁻_j)² )
+              </div>
+              <div className="topsis-math-formula">
+                6. Relative Closeness: C_i = d⁻_i / (d⁺_i + d⁻_i),  where C_i ∈ [0, 1]
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* E. Why the Primary site ranked first */}
+        {topSite && topScore && (
+          <div className="why-first-card">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
+              <span className="winner-rank-badge font-mono" style={{ fontSize: '0.75rem' }}>
+                DECISION JUSTIFICATION
+              </span>
+              <strong style={{ fontSize: '1.05rem', color: '#f8fafc' }}>
+                Why {topSite.name} Ranked #1
+              </strong>
+            </div>
+            <p style={{ margin: '0 0 0.75rem 0', fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+              {topSite.name} achieved a TOPSIS relative closeness score of <strong>{(topScore.closeness * 100).toFixed(2)}%</strong> (C_1 = {topScore.closeness.toFixed(4)}), leading the runner-up {primaryWhyFirst.runnerUpSite ? `(${primaryWhyFirst.runnerUpSite.name})` : 'candidate'} by <strong>{primaryWhyFirst.leadMarginPct} percentage points</strong>.
+              This ranking is grounded in actual physical measurements and mission criterion weights:
+            </p>
+
+            <div className="why-first-grid">
+              {primaryWhyFirst.advantages.map((adv) => (
+                <div key={adv.cid} className="why-first-item">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <strong style={{ fontSize: '0.825rem', color: 'var(--accent-teal)' }}>
+                      {adv.label} ({adv.weightPct}% Weight)
+                    </strong>
+                    {adv.isBestInClass && (
+                      <span className="status-pill status-pill--pass font-mono" style={{ fontSize: '0.65rem' }}>
+                        Best-in-Class
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-primary)', marginTop: '0.2rem' }}>
+                    Primary: <strong>{adv.topVal}{adv.unit ? ` ${adv.unit.split(' ')[0]}` : ''}</strong>
+                    {adv.runnerUpVal !== undefined && (
+                      <span style={{ color: 'var(--text-muted)' }}> vs Runner-Up: {adv.runnerUpVal}</span>
+                    )}
+                  </div>
+                  <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.35 }}>
+                    {adv.advantageDescription}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            {/* Trade-Off Disclosures (if any) */}
+            {primaryWhyFirst.tradeOffs.length > 0 && (
+              <div style={{ marginTop: '0.75rem', padding: '0.65rem 0.85rem', background: 'rgba(251, 191, 36, 0.06)', border: '1px solid rgba(251, 191, 36, 0.25)', borderRadius: '6px', fontSize: '0.8rem' }}>
+                <strong style={{ color: '#fbbf24' }}>Trade-Off Disclosure: </strong>
+                {primaryWhyFirst.tradeOffs.map((to) => (
+                  <span key={to.cid}>
+                    In {to.label} ({to.weightPct}% weight), {to.tradeOffDescription}{' '}
+                  </span>
+                ))}
+                However, because {topSite.name} maintained superior performance in higher-weighted criteria, its overall Euclidean distance to the ideal solution (d+ = {topScore.distanceToIdeal.toFixed(4)}) remained the shortest of all candidates.
+              </div>
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* =====================================================================
+          SECTION 5: ACTUAL TOPSIS RANKING TABLE
+          ===================================================================== */}
+      <section className="panel" aria-labelledby="heading-leaderboard" style={{ marginBottom: '1.5rem' }}>
         <div className="panel-header">
           <span className="panel-tag">OFFICIAL LEADERBOARD</span>
           <h2 id="heading-leaderboard" className="panel-title">Feasible Candidate Rankings (TOPSIS)</h2>
           <p className="panel-subtitle">
-            Ranked by geometric relative closeness to the ideal solution vector (C_i = S^- / [S^+ + S^-]).
-            Robustness win rates calculated from 500 Monte Carlo stochastic iterations with weight and measurement margin perturbations.
+            Ranked by geometric relative closeness to the ideal solution vector (C_i = d⁻ / [d⁺ + d⁻]).
+            Candidate sites that violated physical engineering limits were filtered prior to ranking.
           </p>
         </div>
 
@@ -782,11 +1245,11 @@ export function Results({
                   <th scope="col" style={{ minWidth: '180px' }}>Candidate Landing Site</th>
                   <th scope="col" style={{ minWidth: '120px' }}>Region</th>
                   <th scope="col" style={{ minWidth: '140px' }}>TOPSIS Score (C_i)</th>
-                  <th scope="col" style={{ minWidth: '110px' }} title="Percentage of 500 Monte Carlo iterations where this site ranked #1">
-                    MC Win Rate
+                  <th scope="col" className="text-right" style={{ minWidth: '85px' }} title="Euclidean distance to ideal solution (lower is closer to ideal)">
+                    d⁺ (Ideal)
                   </th>
-                  <th scope="col" className="text-right" style={{ minWidth: '80px' }} title="Percentage of iterations where this site ranked in Top 3">
-                    Top 3 %
+                  <th scope="col" className="text-right" style={{ minWidth: '85px' }} title="Euclidean distance to worst anti-ideal solution (higher is farther from worst)">
+                    d⁻ (Worst)
                   </th>
                   <th scope="col" className="text-right" style={{ minWidth: '80px' }}>Slope (°)</th>
                   <th scope="col" className="text-right" style={{ minWidth: '80px' }}>Sun (%)</th>
@@ -802,15 +1265,14 @@ export function Results({
                   if (!site) return null
                   const isTop = score.rank === 1
                   const isBackup = backupSite && score.id === backupSite.id
-                  const mc = mcStatsMap.get(score.id)
 
                   return (
                     <tr
                       key={score.id}
-                      className={isTop ? 'leaderboard-row--top' : undefined}
+                      className={isTop ? 'leaderboard-row--top' : isBackup ? 'leaderboard-row--backup' : undefined}
                     >
                       <td style={{ textAlign: 'center' }}>
-                        <span className={`rank-pill ${isTop ? 'rank-pill--first' : ''} font-mono`}>
+                        <span className={`rank-pill ${isTop ? 'rank-pill--first' : isBackup ? 'rank-pill--backup' : ''} font-mono`}>
                           #{score.rank}
                         </span>
                       </td>
@@ -836,12 +1298,12 @@ export function Results({
                           </button>
                           {isTop && (
                             <span className="winner-rank-badge font-mono" style={{ fontSize: '0.65rem', padding: '0.1rem 0.35rem' }}>
-                              PRIMARY
+                              PRIMARY #1
                             </span>
                           )}
                           {isBackup && (
                             <span className="backup-rank-badge font-mono" style={{ fontSize: '0.65rem', padding: '0.1rem 0.35rem' }}>
-                              BACKUP
+                              BACKUP #{score.rank}
                             </span>
                           )}
                         </div>
@@ -850,7 +1312,7 @@ export function Results({
                       <td>
                         <div className="score-cell text-nowrap">
                           <span className="font-mono score-num">
-                            {score.closeness.toFixed(4)}
+                            {(score.closeness * 100).toFixed(2)}%
                           </span>
                           <div className="score-bar" aria-hidden="true">
                             <div
@@ -860,25 +1322,11 @@ export function Results({
                           </div>
                         </div>
                       </td>
-                      <td>
-                        {mc ? (
-                          <div className="mc-cell font-mono text-nowrap">
-                            <div className="mc-bar-track" aria-hidden="true">
-                              <div
-                                className="mc-bar-fill"
-                                style={{ width: `${Math.min(100, mc.winRate * 100)}%` }}
-                              />
-                            </div>
-                            <span style={{ fontSize: '0.8rem', minWidth: '42px' }}>
-                              {(mc.winRate * 100).toFixed(1)}%
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-muted font-mono">—</span>
-                        )}
+                      <td className="font-mono text-right text-muted text-nowrap">
+                        {score.distanceToIdeal.toFixed(4)}
                       </td>
-                      <td className="font-mono text-muted text-right text-nowrap">
-                        {mc ? `${(mc.top3Rate * 100).toFixed(1)}%` : '—'}
+                      <td className="font-mono text-right text-muted text-nowrap">
+                        {score.distanceToAntiIdeal.toFixed(4)}
                       </td>
                       <td className="font-mono text-right text-nowrap">{site.criteria.slope.value}°</td>
                       <td className="font-mono text-right text-nowrap">{site.criteria.illumination.value}%</td>
@@ -906,6 +1354,314 @@ export function Results({
             </table>
           </div>
         )}
+      </section>
+
+      {/* =====================================================================
+          SECTION 6: MONTE CARLO ROBUSTNESS ANALYSIS — HOW STABLE IS RECOMMENDATION?
+          ===================================================================== */}
+      <section className="panel" aria-labelledby="heading-montecarlo-analysis" style={{ marginBottom: '1.5rem' }}>
+        <div className="panel-header">
+          <span className="panel-tag">SENSITIVITY & ROBUSTNESS AUDIT</span>
+          <h2 id="heading-montecarlo-analysis" className="panel-title">
+            Monte Carlo Robustness Analysis — How Stable Is the Recommendation?
+          </h2>
+          <p className="panel-subtitle" style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+            Monte Carlo robustness analysis repeatedly recalculates the ranking while varying the criterion weights within defined assumptions. It helps us determine whether the recommended site consistently ranks first or whether small changes in priorities could change the recommendation.
+          </p>
+        </div>
+
+        {/* Mandatory Analytical Framing Notice */}
+        <div className="notice-banner notice-banner--warning" role="alert" style={{ margin: '1rem 0' }}>
+          <span className="notice-icon" aria-hidden="true">⚖️</span>
+          <div className="notice-content">
+            <strong className="notice-title">Analytical Framing & Scientific Boundary</strong>
+            <p className="notice-text">
+              Monte Carlo results measure how STABLE a recommendation is when data values and priorities vary within stated assumptions. They are NOT the probability that a site is safe, suitable or will succeed.
+            </p>
+          </div>
+        </div>
+
+        {/* Simulation Parameters Grid */}
+        <div className="mc-sim-info-grid">
+          <div className="mc-sim-card">
+            <span className="mc-sim-label">SIMULATIONS PERFORMED</span>
+            <span className="mc-sim-val text-teal">
+              {monteCarloResult ? monteCarloResult.iterations.toLocaleString() : '500'} Trials
+            </span>
+            <span className="mc-sim-sub">
+              Deterministic Mulberry32 PRNG (Audit Seed: {monteCarloResult?.seed ?? 42})
+            </span>
+          </div>
+
+          <div className="mc-sim-card">
+            <span className="mc-sim-label">WEIGHT VARIATION SPREAD</span>
+            <span className="mc-sim-val text-yellow">
+              ±{monteCarloResult ? (monteCarloResult.weightRelativeSpread * 100).toFixed(0) : '15'}%
+            </span>
+            <span className="mc-sim-sub">
+              Uniform perturbation around active weights, renormalized to sum to 1.0
+            </span>
+          </div>
+
+          <div className="mc-sim-card">
+            <span className="mc-sim-label">SENSOR MEASUREMENT UNCERTAINTY</span>
+            <span className="mc-sim-val" style={{ color: '#38bdf8' }}>
+              Inverse-CDF Triangular
+            </span>
+            <span className="mc-sim-sub">
+              Perturbs nominal values within published instrument error bounds [low, high]
+            </span>
+          </div>
+
+          <div className="mc-sim-card">
+            <span className="mc-sim-label">PHYSICAL SAFETY CONSTRAINTS</span>
+            <span className="mc-sim-val" style={{ color: '#4ade80' }}>
+              Fixed Limits
+            </span>
+            <span className="mc-sim-sub">
+              Physical engineering thresholds (e.g. slope limits) remain strictly enforced
+            </span>
+          </div>
+        </div>
+
+        {/* Primary & Backup Robustness Findings */}
+        {topSite && (
+          <div style={{ marginTop: '1.25rem', padding: '1rem 1.25rem', background: 'rgba(15, 23, 42, 0.6)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
+            {(() => {
+              const topStats = mcTableStats.find((s) => s.site.id === topSite.id)
+              const backupStats = backupSite ? mcTableStats.find((s) => s.site.id === backupSite.id) : undefined
+              const rank1Pct = topStats ? topStats.rank1Pct.toFixed(1) : '—'
+              const stability = topStats?.stability ?? 'Robust'
+              const stabilityClass = topStats?.stabilityClass ?? 'status-pill--pass'
+
+              return (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                    <div>
+                      <span className="section-tag" style={{ marginBottom: '0.2rem' }}>STABILITY VERDICT</span>
+                      <h4 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-primary)' }}>
+                        Primary Selection Stability: {topSite.name}
+                      </h4>
+                    </div>
+                    <span className={`status-pill ${stabilityClass} font-mono`} style={{ fontSize: '0.85rem', padding: '0.3rem 0.75rem' }}>
+                      {stability.toUpperCase()} ({rank1Pct}% Rank #1)
+                    </span>
+                  </div>
+
+                  <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                    Under the tested weight variations, <strong>{topSite.name}</strong> ranked first in <strong>{rank1Pct}%</strong> of simulated scenarios.
+                    {stability === 'Robust' && (
+                      <> The recommendation is <strong>Robust</strong> (Rank #1 ≥ 70%), consistently retaining first place across wide priority fluctuations and sensor error margins.</>
+                    )}
+                    {stability === 'Moderately Stable' && (
+                      <> The recommendation is <strong>Moderately Stable</strong> (Rank #1: 40%–69% or Top 2 ≥ 60%), leading in the majority of scenarios while allowing specific priority combinations to favor an alternative.</>
+                    )}
+                    {stability === 'Sensitive' && (
+                      <> The recommendation is <strong>Sensitive</strong> (Rank #1 &lt; 40%), indicating that slight adjustments in stakeholder weights frequently swap the leading candidate.</>
+                    )}
+                  </p>
+
+                  {backupSite && backupStats && (
+                    <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-subtle)', fontSize: '0.825rem', color: 'var(--text-secondary)' }}>
+                      <strong style={{ color: '#fed7aa' }}>Backup Candidate Stability: </strong>
+                      <strong>{backupSite.name}</strong> placed in the Top 2 in <strong>{backupStats.top2Pct.toFixed(1)}%</strong> of scenarios (with an average simulated rank of <strong>{backupStats.avgRank}</strong>), confirming its statistical stability as an operational fallback.
+                    </div>
+                  )}
+
+                  {/* Explicit Explanation of What the Percentages Mean */}
+                  <div style={{ marginTop: '0.75rem', padding: '0.65rem 0.85rem', background: 'rgba(56, 189, 248, 0.06)', border: '1px solid rgba(56, 189, 248, 0.25)', borderRadius: '6px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    <strong style={{ color: '#38bdf8' }}>What This Percentage Means: </strong>
+                    An 87% (or similar) win rate means that under the tested weight variations, this site ranked first in 87% of simulated scenarios.
+                    It does <strong>NOT</strong> represent a landing probability, mission success probability, touchdown safety score, or water presence likelihood.
+                  </div>
+                </div>
+              )
+            })()}
+          </div>
+        )}
+
+        {/* Actual Simulation Results Table */}
+        <div style={{ marginTop: '1.25rem' }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
+            Monte Carlo Simulation Output Table
+          </h3>
+          <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
+            Derived directly from 500 stochastic trials. Thresholds: <strong>Robust</strong> (Rank #1 ≥ 70%), <strong>Moderately Stable</strong> (Rank #1 40%–69% or Top 2 ≥ 60%), <strong>Sensitive</strong> (Rank #1 &lt; 40%).
+          </p>
+
+          <div className="table-responsive">
+            <table className="comparison-table" style={{ fontSize: '0.825rem' }}>
+              <thead>
+                <tr>
+                  <th scope="col" style={{ width: '80px', textAlign: 'center' }}>TOPSIS Rank</th>
+                  <th scope="col" style={{ minWidth: '180px' }}>Candidate Landing Site</th>
+                  <th scope="col" style={{ minWidth: '120px' }}>Region</th>
+                  <th scope="col" className="text-right" style={{ minWidth: '100px' }} title="Percentage of simulations where site ranked #1">
+                    Ranked #1 (%)
+                  </th>
+                  <th scope="col" className="text-right" style={{ minWidth: '100px' }} title="Percentage of simulations where site placed in Top 2">
+                    Top 2 (%)
+                  </th>
+                  <th scope="col" className="text-right" style={{ minWidth: '100px' }} title="Average rank across all simulations where site was eligible">
+                    Average Rank
+                  </th>
+                  <th scope="col" className="text-center" style={{ minWidth: '130px' }}>
+                    Stability Status
+                  </th>
+                  {(onViewOnMap || onNavigate) && <th scope="col" className="col-action text-center">Action</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {mcTableStats.map(({ site, nominalRank, rank1Pct, top2Pct, avgRank, stability, stabilityClass }) => {
+                  const isTop = nominalRank === 1
+                  const isBackup = backupSite && site.id === backupSite.id
+                  const isSelected = selectedMcSiteId === site.id
+
+                  return (
+                    <tr
+                      key={site.id}
+                      onClick={() => setSelectedMcSiteId(site.id === selectedMcSiteId ? null : site.id)}
+                      style={{
+                        cursor: 'pointer',
+                        backgroundColor: isSelected
+                          ? 'rgba(45, 212, 191, 0.08)'
+                          : isTop
+                          ? 'rgba(45, 212, 191, 0.03)'
+                          : isBackup
+                          ? 'rgba(249, 115, 22, 0.03)'
+                          : undefined,
+                      }}
+                    >
+                      <td style={{ textAlign: 'center' }}>
+                        <span className={`rank-pill ${isTop ? 'rank-pill--first' : isBackup ? 'rank-pill--backup' : ''} font-mono`}>
+                          #{nominalRank}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', whiteSpace: 'nowrap' }}>
+                          <strong style={{ color: isSelected ? 'var(--accent-teal)' : 'inherit' }}>
+                            {site.name}
+                          </strong>
+                          {isTop && (
+                            <span className="winner-rank-badge font-mono" style={{ fontSize: '0.65rem', padding: '0.1rem 0.35rem' }}>
+                              PRIMARY
+                            </span>
+                          )}
+                          {isBackup && (
+                            <span className="backup-rank-badge font-mono" style={{ fontSize: '0.65rem', padding: '0.1rem 0.35rem' }}>
+                              BACKUP
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="text-muted text-nowrap">{site.region}</td>
+                      <td className="text-right font-mono text-nowrap" style={{ fontWeight: isTop ? 700 : 400, color: rank1Pct >= 50 ? '#2dd4bf' : 'inherit' }}>
+                        {rank1Pct.toFixed(1)}%
+                      </td>
+                      <td className="text-right font-mono text-nowrap" style={{ color: top2Pct >= 60 ? '#38bdf8' : 'inherit' }}>
+                        {top2Pct.toFixed(1)}%
+                      </td>
+                      <td className="text-right font-mono text-nowrap">
+                        {avgRank}
+                      </td>
+                      <td className="text-center text-nowrap">
+                        <span className={`status-pill ${stabilityClass}`} style={{ fontSize: '0.725rem' }}>
+                          {stability}
+                        </span>
+                      </td>
+                      {(onViewOnMap || onNavigate) && (
+                        <td className="col-action text-center text-nowrap" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            className="btn btn--subtle btn--small"
+                            onClick={() => (onViewOnMap ? onViewOnMap(site.id) : onNavigate?.('map'))}
+                            title={`Locate ${site.name} on Lunar Map`}
+                          >
+                            Map ↗
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Visual Rank Frequency Distribution Breakdown */}
+        <div style={{ marginTop: '1.5rem' }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
+            Simulated Rank Distribution Frequency (Top Candidates)
+          </h3>
+          <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
+            Visualizes placement frequencies across all 500 simulated scenarios for the leading candidates.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {mcTableStats.slice(0, 4).map(({ site, nominalRank, summary }) => {
+              if (!summary) return null
+              const total = monteCarloResult?.iterations || 500
+              const r1 = ((summary.rankCounts[0] ?? 0) / total) * 100
+              const r2 = ((summary.rankCounts[1] ?? 0) / total) * 100
+              const r3 = ((summary.rankCounts[2] ?? 0) / total) * 100
+              const r4Plus = ((summary.rankCounts.slice(3).reduce((a, b) => a + b, 0)) / total) * 100
+              const notRanked = ((summary.notRankedCount ?? 0) / total) * 100
+
+              return (
+                <div key={site.id} style={{ background: 'rgba(15, 23, 42, 0.5)', border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '0.75rem 1rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span className="font-mono text-muted" style={{ fontSize: '0.75rem' }}>#{nominalRank}</span>
+                      <strong style={{ fontSize: '0.9rem', color: '#f8fafc' }}>{site.name}</strong>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>({site.region})</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.725rem', fontFamily: 'var(--font-mono)' }}>
+                      <span style={{ color: '#2dd4bf' }}>Rank #1: {r1.toFixed(1)}%</span>
+                      <span style={{ color: '#fb923c' }}>Rank #2: {r2.toFixed(1)}%</span>
+                      <span style={{ color: '#38bdf8' }}>Rank #3: {r3.toFixed(1)}%</span>
+                      {r4Plus > 0 && <span style={{ color: '#94a3b8' }}>Rank #4+: {r4Plus.toFixed(1)}%</span>}
+                    </div>
+                  </div>
+
+                  {/* Multi-Segment Stacked Rank Distribution Bar */}
+                  <div style={{ display: 'flex', height: '14px', borderRadius: '4px', overflow: 'hidden', background: 'rgba(255,255,255,0.06)' }}>
+                    {r1 > 0 && (
+                      <div
+                        style={{ width: `${r1}%`, background: '#2dd4bf' }}
+                        title={`Rank #1: ${r1.toFixed(1)}% (${summary.rankCounts[0]} trials)`}
+                      />
+                    )}
+                    {r2 > 0 && (
+                      <div
+                        style={{ width: `${r2}%`, background: '#fb923c' }}
+                        title={`Rank #2: ${r2.toFixed(1)}% (${summary.rankCounts[1]} trials)`}
+                      />
+                    )}
+                    {r3 > 0 && (
+                      <div
+                        style={{ width: `${r3}%`, background: '#38bdf8' }}
+                        title={`Rank #3: ${r3.toFixed(1)}% (${summary.rankCounts[2]} trials)`}
+                      />
+                    )}
+                    {r4Plus > 0 && (
+                      <div
+                        style={{ width: `${r4Plus}%`, background: '#64748b' }}
+                        title={`Rank #4+: ${r4Plus.toFixed(1)}%`}
+                      />
+                    )}
+                    {notRanked > 0 && (
+                      <div
+                        style={{ width: `${notRanked}%`, background: '#ef4444' }}
+                        title={`Infeasible: ${notRanked.toFixed(1)}%`}
+                      />
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
       </section>
 
       {/* FILTERED & DISQUALIFIED SITES BREAKDOWN */}

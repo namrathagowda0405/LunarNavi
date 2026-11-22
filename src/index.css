@@ -4508,6 +4508,141 @@ body {
   }
 }
 
+/* =============================================================================
+   TOPSIS & Monte Carlo Transparent Analysis Styles
+   ============================================================================= */
+
+.leaderboard-row--backup {
+  background-color: rgba(249, 115, 22, 0.05);
+}
+
+.rank-pill--backup {
+  background-color: rgba(249, 115, 22, 0.15);
+  color: #fb923c;
+  border: 1px solid rgba(249, 115, 22, 0.4);
+}
+
+.topsis-steps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 0.85rem;
+  margin-top: 1rem;
+}
+
+.topsis-step-card {
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.topsis-step-num {
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  color: var(--accent-teal);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.topsis-step-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.topsis-step-desc {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.topsis-math-block {
+  background: rgba(10, 15, 29, 0.85);
+  border: 1px solid var(--border-medium);
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  margin-top: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.825rem;
+  color: #94a3b8;
+  line-height: 1.6;
+}
+
+.topsis-math-formula {
+  background: rgba(255, 255, 255, 0.04);
+  border-left: 3px solid var(--accent-teal);
+  padding: 0.5rem 0.75rem;
+  margin: 0.5rem 0;
+  border-radius: 0 4px 4px 0;
+  color: #f1f5f9;
+}
+
+.mc-sim-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+}
+
+.mc-sim-card {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.mc-sim-label {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-family: var(--font-mono);
+}
+
+.mc-sim-val {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+
+.mc-sim-sub {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
+.why-first-card {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(15, 23, 42, 0.7) 100%);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: 8px;
+  padding: 1.1rem 1.25rem;
+  margin-top: 1.25rem;
+}
+
+.why-first-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+}
+
+.why-first-item {
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 0.75rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
 /* Reduced Motion Mode */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -4517,3 +4652,4 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
