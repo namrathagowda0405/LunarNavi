@@ -3,8 +3,7 @@ services:
     name: lunarnavi
     runtime: static
     branch: main
-    autoDeployTrigger: commit
-    buildCommand: npm run build
+    buildCommand: npm install && npm run build
     staticPublishPath: ./dist
     routes:
       - type: rewrite
