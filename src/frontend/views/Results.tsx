@@ -209,10 +209,10 @@ export function Results({
             </p>
             <div style={{ marginTop: '0.4rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap', fontSize: '0.775rem', fontFamily: 'var(--font-mono)' }}>
               <span style={{ background: 'rgba(255,255,255,0.06)', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
-                🚀 Launch: <strong>{formState.launchDate ?? '2027-05-27'}</strong>
+                🚀 Launch: <strong>{formState.launchDate || 'Unspecified'}</strong>
               </span>
               <span style={{ background: 'rgba(255,255,255,0.06)', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
-                📅 Arrival: <strong>{formState.arrivalDate ?? '2027-06-01'}</strong> {formState.arrivalWindowDays ? `(±${Math.round(formState.arrivalWindowDays / 2)}d)` : ''}
+                📅 Arrival: <strong>{formState.arrivalDate || 'Unspecified'}</strong> {formState.arrivalWindowDays ? `(±${Math.round(formState.arrivalWindowDays / 2)}d)` : ''}
               </span>
               <span style={{ background: 'rgba(255,255,255,0.06)', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
                 ⏳ Stay Duration: <strong>{formState.durationDays ?? 14} Earth days</strong>

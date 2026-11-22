@@ -1,4 +1,4 @@
-import { useState, useId } from 'react'
+import { useState, useId, useRef } from 'react'
 import { MissionProfile } from '../../engine/mission'
 import {
   CRITERION_LABELS,
@@ -27,6 +27,8 @@ export function MissionSetup({
 }: MissionSetupProps) {
   const [errors, setErrors] = useState<string[]>([])
   const errorBoxId = useId()
+  const launchInputRef = useRef<HTMLInputElement>(null)
+  const arrivalInputRef = useRef<HTMLInputElement>(null)
 
   const typeOpt = MISSION_TYPES.find((t) => t.id === formState.missionType)
   const currentRationale = MISSION_WEIGHT_RATIONALE[formState.missionType]
@@ -37,6 +39,7 @@ export function MissionSetup({
     if (!opt || !opt.enabled) return
     const validId = typeId as MissionTypeId
     const preset = getMissionPresetState(validId, {
+      launchDate: formState.launchDate,
       arrivalDate: formState.arrivalDate,
       arrivalWindowDays: formState.arrivalWindowDays,
     })
@@ -65,6 +68,22 @@ export function MissionSetup({
     })
   }
 
+  const handleClearLaunchDate = () => {
+    onFormChange({
+      ...formState,
+      launchDate: '',
+    })
+    launchInputRef.current?.focus()
+  }
+
+  const handleClearArrivalDate = () => {
+    onFormChange({
+      ...formState,
+      arrivalDate: '',
+    })
+    arrivalInputRef.current?.focus()
+  }
+
   const handleDurationChange = (days: number) => {
     onFormChange({
       ...formState,
@@ -74,9 +93,29 @@ export function MissionSetup({
 
   // Analyze Handler
   const handleAnalyze = () => {
+    const validationErrors: string[] = []
+    if (!formState.launchDate || !formState.launchDate.trim()) {
+      validationErrors.push('Planned launch/departure date is required before analyzing landing sites.')
+    }
+    if (!formState.arrivalDate || !formState.arrivalDate.trim()) {
+      validationErrors.push('Estimated lunar arrival date is required before analyzing landing sites.')
+    }
+    if (formState.launchDate && formState.arrivalDate) {
+      const pLaunch = new Date(formState.launchDate)
+      const pArrival = new Date(formState.arrivalDate)
+      if (!isNaN(pLaunch.getTime()) && !isNaN(pArrival.getTime()) && pArrival.getTime() < pLaunch.getTime()) {
+        validationErrors.push('Estimated lunar arrival date must be on or after the planned launch/departure date.')
+      }
+    }
+
     const result = buildMissionProfile(formState)
-    if (!result.ok || !result.profile) {
-      setErrors(result.errors)
+    const allErrors = [
+      ...validationErrors,
+      ...(result.ok ? [] : result.errors),
+    ]
+
+    if (allErrors.length > 0 || !result.profile) {
+      setErrors(allErrors)
       const el = document.getElementById(errorBoxId)
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
@@ -95,8 +134,8 @@ export function MissionSetup({
   }
 
   const currentDuration = formState.durationDays ?? DEFAULT_MISSION_DURATIONS[formState.missionType] ?? 14
-  const currentLaunch = formState.launchDate ?? '2027-05-27'
-  const currentArrival = formState.arrivalDate ?? '2027-06-01'
+  const currentLaunch = formState.launchDate ?? ''
+  const currentArrival = formState.arrivalDate ?? ''
 
   return (
     <div className="view-container">
@@ -349,16 +388,92 @@ export function MissionSetup({
             <label htmlFor="launch-date-input" className="form-label">
               Planned Launch / Departure Date <span className="required-mark">*</span>
             </label>
-            <input
-              type="date"
-              id="launch-date-input"
-              className="form-input font-mono"
-              min="2025-01-01"
-              max="2035-12-31"
-              value={currentLaunch}
-              onChange={handleLaunchDateChange}
-              required
-            />
+            <div className="date-input-wrapper" style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <input
+                ref={launchInputRef}
+                type="date"
+                id="launch-date-input"
+                className="form-input font-mono date-picker-input"
+                min="2025-01-01"
+                max="2035-12-31"
+                value={currentLaunch}
+                onChange={handleLaunchDateChange}
+                onClick={(e) => {
+                  try {
+                    e.currentTarget.showPicker?.()
+                  } catch {
+                    // Fallback for browsers that don't support showPicker
+                  }
+                }}
+                placeholder="Select date"
+                required
+                style={{
+                  width: '100%',
+                  paddingRight: currentLaunch ? '4.8rem' : '2.6rem',
+                  cursor: 'pointer',
+                  colorScheme: 'dark',
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  right: '0.4rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.2rem',
+                }}
+              >
+                {currentLaunch && (
+                  <button
+                    type="button"
+                    className="date-clear-btn"
+                    onClick={handleClearLaunchDate}
+                    title="Clear launch date"
+                    aria-label="Clear launch date"
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      border: '1px solid var(--border-subtle)',
+                      color: 'var(--text-muted)',
+                      cursor: 'pointer',
+                      padding: '0.25rem 0.45rem',
+                      fontSize: '0.8rem',
+                      borderRadius: '4px',
+                      lineHeight: 1,
+                    }}
+                  >
+                    ✕
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="date-picker-trigger-btn"
+                  onClick={() => {
+                    try {
+                      launchInputRef.current?.showPicker?.()
+                    } catch {
+                      launchInputRef.current?.focus()
+                    }
+                  }}
+                  title="Open calendar picker"
+                  aria-label="Open calendar picker"
+                  style={{
+                    background: 'rgba(0, 229, 255, 0.1)',
+                    border: '1px solid rgba(0, 229, 255, 0.3)',
+                    color: 'var(--accent-teal)',
+                    cursor: 'pointer',
+                    padding: '0.3rem 0.45rem',
+                    fontSize: '0.9rem',
+                    borderRadius: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    lineHeight: 1,
+                  }}
+                >
+                  📅
+                </button>
+              </div>
+            </div>
             <p className="form-hint">
               Earth departure calendar date for translunar injection.
             </p>
@@ -369,16 +484,92 @@ export function MissionSetup({
             <label htmlFor="arrival-date-input" className="form-label">
               Estimated Lunar Arrival Date <span className="required-mark">*</span>
             </label>
-            <input
-              type="date"
-              id="arrival-date-input"
-              className="form-input font-mono"
-              min={currentLaunch || '2025-01-01'}
-              max="2035-12-31"
-              value={currentArrival}
-              onChange={handleArrivalDateChange}
-              required
-            />
+            <div className="date-input-wrapper" style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <input
+                ref={arrivalInputRef}
+                type="date"
+                id="arrival-date-input"
+                className="form-input font-mono date-picker-input"
+                min={currentLaunch || '2025-01-01'}
+                max="2035-12-31"
+                value={currentArrival}
+                onChange={handleArrivalDateChange}
+                onClick={(e) => {
+                  try {
+                    e.currentTarget.showPicker?.()
+                  } catch {
+                    // Fallback for browsers that don't support showPicker
+                  }
+                }}
+                placeholder="Select date"
+                required
+                style={{
+                  width: '100%',
+                  paddingRight: currentArrival ? '4.8rem' : '2.6rem',
+                  cursor: 'pointer',
+                  colorScheme: 'dark',
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  right: '0.4rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.2rem',
+                }}
+              >
+                {currentArrival && (
+                  <button
+                    type="button"
+                    className="date-clear-btn"
+                    onClick={handleClearArrivalDate}
+                    title="Clear arrival date"
+                    aria-label="Clear arrival date"
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      border: '1px solid var(--border-subtle)',
+                      color: 'var(--text-muted)',
+                      cursor: 'pointer',
+                      padding: '0.25rem 0.45rem',
+                      fontSize: '0.8rem',
+                      borderRadius: '4px',
+                      lineHeight: 1,
+                    }}
+                  >
+                    ✕
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="date-picker-trigger-btn"
+                  onClick={() => {
+                    try {
+                      arrivalInputRef.current?.showPicker?.()
+                    } catch {
+                      arrivalInputRef.current?.focus()
+                    }
+                  }}
+                  title="Open calendar picker"
+                  aria-label="Open calendar picker"
+                  style={{
+                    background: 'rgba(0, 229, 255, 0.1)',
+                    border: '1px solid rgba(0, 229, 255, 0.3)',
+                    color: 'var(--accent-teal)',
+                    cursor: 'pointer',
+                    padding: '0.3rem 0.45rem',
+                    fontSize: '0.9rem',
+                    borderRadius: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    lineHeight: 1,
+                  }}
+                >
+                  📅
+                </button>
+              </div>
+            </div>
             <p className="form-hint">
               Target arrival calendar date (must not precede launch date).
             </p>
