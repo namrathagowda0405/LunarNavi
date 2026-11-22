@@ -39,7 +39,13 @@ function getInitialFormState(): MissionFormState {
   if (typeof window !== 'undefined') {
     try {
       const saved = localStorage.getItem(FORM_STATE_STORAGE_KEY)
-      if (saved) return JSON.parse(saved)
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        // Clear legacy preset dates so user starts with clean empty fields
+        if (parsed.launchDate === '2027-05-27') parsed.launchDate = ''
+        if (parsed.arrivalDate === '2027-06-01') parsed.arrivalDate = ''
+        return parsed
+      }
     } catch (e) {
       console.warn('Could not read form state from localStorage:', e)
     }
